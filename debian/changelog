@@ -1,0 +1,35 @@
+ikarus (0.0.3-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue,  5 Feb 2008 13:09:13 +0000
+
+ikarus (0.0.3-rc1-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue,  5 Feb 2008 12:52:04 +0000
+
+ikarus (0.0.2-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Thu, 29 Nov 2007 19:37:09 +0000
+
+ikarus (0.0.2-rc2-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Thu, 29 Nov 2007 06:30:33 +0000
+
+ikarus (0.0.2-rc1-1) unstable; urgency=low
+
+  * New upstream release
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Wed, 28 Nov 2007 18:20:50 +0000
+
+ikarus (0.0.1-1) unstable; urgency=low
+
+  * Initial release (Closes: #449489)
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue, 27 Nov 2007 14:44:32 +0000

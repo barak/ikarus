@@ -39,7 +39,7 @@ static size_t as = 0;
 
 static void*
 do_mmap(size_t n){
-  void* x = mmap(0, n, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+  void* x = mmap(0, n, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
   if(x == (void*)-1){
     fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
     exit(-1);

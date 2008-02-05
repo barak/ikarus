@@ -1,0 +1,11 @@
+ikarus for Debian
+-----------------
+
+The main unusual feature of this system is that its compiler can emit
+code only for the i386/amd64 architecture and requires the SSE2
+extensions.  These are, to my knowledge, available on all amd64 CPUs
+by both Intel and AMD, but not on PIII or earlier (Intel) or k7 or
+earlier (AMD) i386 CPUs.  The availability of SSE2 is tested at both
+build and install time.
+
+ -- Barak A. Pearlmutter <bap@debian.org>, Tue, 27 Nov 2007 17:55:55 +0000

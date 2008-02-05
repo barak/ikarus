@@ -1,0 +1,72 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH IKARUS 1 "November 27, 2007"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+ikarus \- Scheme Programming Language
+.SH SYNOPSIS
+.B ikarus
+.RI -h
+.br
+.B ikarus
+[-b bootfile] --r6rs-script scriptfile [opts]
+.br
+.B ikarus
+[-b bootfile] [files] [opts]
+.SH DESCRIPTION
+The
+.B ikarus
+command starts the Ikarus Scheme system.
+Invoking \fBikarus\fP without options enters a read-eval-print loop.
+.SH OPTIONS
+.TP
+.B \-h
+Show summary of options.
+.TP
+.B \-b bootfile
+If the option [-b <bootfile>] is provided, the bootfile is used as the
+system's initial boot file from which the environment is initialized.
+If that is not set, the default boot file /usr/lib/ikarus/ikarus.boot
+is used.
+.TP
+.B [\-b bootfile] \--r6rs-script scriptfile [opts]
+Starts ikarus in r6rs-script mode.  The script file is treated as an
+R6RS-script.  The command line options following scriptfile can be
+obtained using the "command-line" procedure in the (rnrs programs)
+library.
+.TP
+.B [\-b bootfile] [files] [opts]
+Starts ikarus in interactive mode.  Each of the files is first loaded
+into the interaction environment before the interactive
+read-eval-print loop is started.  The command line options following
+the list of files to load can be obtained using the "command-line"
+procedure.
+.SH FILES
+/usr/lib/ikarus/ikarus.boot
+.SH ENVIRONMENT VARIABLES
+none
+.SH SEE ALSO
+The wrapper scheme-script(1) is useful for writing Scheme scripts that
+use ikarus.
+.PP
+Further documentation is available in
+/usr/share/doc/ikarus/ikarus-scheme-users-guide.pdf and at
+http://www.cs.indiana.edu/~aghuloum/ikarus/.
+.SH AUTHOR
+ikarus was written by Abdulaziz Ghuloum.
+.PP
+This manual page was written by Barak A. Pearlmutter <bap@debian.org>
+while packaging ikarus for Debian.

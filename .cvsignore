@@ -1,0 +1,7 @@
+Makefile
+autom4te.cache
+build-arch-stamp
+build-indep-stamp
+config.h
+config.status
+stamp-h1

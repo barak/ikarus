@@ -1,0 +1,11 @@
+Document: ikarus
+Title: Ikarus Scheme User's Guide
+Author: Abdulaziz Ghuloum
+Abstract: This is the user's manual for the ikarus scheme system,
+ which is a case-sensitive compiler-based implementation of the Scheme
+ programming language, and supports a respectable subset of the
+ constructs mandated by R6RS.
+Section: unknown
+
+Format: PDF
+Files: /usr/share/doc/ikarus/ikarus-scheme-users-guide.pdf
