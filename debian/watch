@@ -3,4 +3,4 @@
 # Compulsory line, this is a version 3 file
 version=3
 
-http://www.cs.indiana.edu/~aghuloum/ikarus/index.html ikarus-(.*)\.tar\.gz
+http://www.cs.indiana.edu/~aghuloum/ikarus/index.html ikarus-([0-9.]*)\.tar\.gz

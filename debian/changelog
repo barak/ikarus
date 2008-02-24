@@ -1,3 +1,9 @@
+ikarus (0.0.3-2) unstable; urgency=low
+
+  * Rephrase short description (closes: #467354)
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Sun, 24 Feb 2008 21:13:23 +0000
+
 ikarus (0.0.3-1) unstable; urgency=low
 
   * New upstream release
