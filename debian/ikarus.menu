@@ -1,2 +1,2 @@
-?package(ikarus):needs="text" section="Apps/Programming"\
+?package(ikarus):needs="text" section="Applications/Programming"\
   title="ikarus scheme" command="/usr/bin/ikarus"

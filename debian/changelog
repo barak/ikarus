@@ -1,3 +1,9 @@
+ikarus (0.0.3-3) unstable; urgency=low
+
+  * fix a few minor lintian warnings
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue, 19 Aug 2008 11:53:25 +0100
+
 ikarus (0.0.3-2) unstable; urgency=low
 
   * Rephrase short description (closes: #467354)
