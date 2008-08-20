@@ -1,0 +1,5 @@
+.deps
+Makefile
+bootfileloc.h
+ikarus
+scheme-script

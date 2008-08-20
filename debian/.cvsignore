@@ -1,0 +1,4 @@
+files
+ikarus
+*.debhelper
+*.substvars

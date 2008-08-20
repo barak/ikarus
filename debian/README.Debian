@@ -8,4 +8,9 @@ by both Intel and AMD, but not on PIII or earlier (Intel) or k7 or
 earlier (AMD) i386 CPUs.  The availability of SSE2 is tested at both
 build and install time.
 
- -- Barak A. Pearlmutter <bap@debian.org>, Tue, 27 Nov 2007 17:55:55 +0000
+Rebuilding the manual requires xelatex, which is in the texlive-xetex
+package, and fonts in ttf-sil-charis, and the Geneva font which is not
+in Debian and would require a substitute.  The debian build process is
+set up to use the pre-built manual instead of regenerating it.
+
+ -- Barak A. Pearlmutter <bap@debian.org>, Fri, 19 Sep 2008 13:08:52 +0100

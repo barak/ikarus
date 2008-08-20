@@ -1,3 +1,9 @@
+ikarus (0.0.3-4) unstable; urgency=low
+
+  * rev deb std, dh7ianize
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Wed, 20 Aug 2008 22:15:16 +0100
+
 ikarus (0.0.3-3) unstable; urgency=low
 
   * fix a few minor lintian warnings
