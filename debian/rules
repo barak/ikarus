@@ -1,31 +1,22 @@
 #!/usr/bin/make -f
 
-build: build-stamp
-build-stamp:
+build clean binary-indep binary-arch binary install:
+	dh $@
+
+.PHONY: build clean binary-indep binary-arch binary install
+
+override_dh_auto_build:
 	egrep -q '^flags[[:space:]]*:.*\bsse2\b' /proc/cpuinfo \
 	 || (echo "error: CPU instruction set extension sse2 not found."; \
 	     echo "   aborting build process"; \
 	     exit 1)
-	dh build --before auto_build
 	dh_auto_build -- -C src
 	dh_auto_build -- -C scheme
-	dh build --after auto_build
-	touch build-stamp
 
-clean:
-	dh $@
-ifneq "$(wildcard /usr/share/misc/config.sub)" ""
-	cp -f /usr/share/misc/config.sub config.sub
-endif
-ifneq "$(wildcard /usr/share/misc/config.guess)" ""
-	cp -f /usr/share/misc/config.guess config.guess
-endif
-
-binary binary-arch binary-indep install: build
-	dh $@ --before dh_compress
+override_dh_install:
+	dh_install
 	rm debian/ikarus/usr/share/doc/ikarus/COPYING
 	rm debian/ikarus/usr/share/doc/ikarus/GPL-3
-	dh_compress -Xikarus-scheme-users-guide.pdf
-	dh $@ --after dh_compress
 
-.PHONY: build clean binary-indep binary-arch binary install
+override_dh_compress:
+	dh_compress -Xikarus-scheme-users-guide.pdf

@@ -1,9 +1,9 @@
 Source: ikarus
-Section: devel
+Section: lisp
 Priority: extra
 Maintainer: Barak A. Pearlmutter <bap@debian.org>
-Build-Depends: debhelper (>= 7), autotools-dev, libgmp3-dev
-Standards-Version: 3.8.0
+Build-Depends: debhelper (>= 7.2.5), autotools-dev, libgmp3-dev
+Standards-Version: 3.8.3
 Homepage: http://www.cs.indiana.edu/~aghuloum/ikarus/
 Vcs-Bzr: http://www.cs.indiana.edu/~aghuloum/ikarus.dev
 
