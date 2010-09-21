@@ -2,6 +2,7 @@
 /Makefile
 /autom4te.cache
 /benchmarks/Makefile
+/config.*.dh-orig
 /config.h
 /config.log
 /config.status
