@@ -3,9 +3,10 @@ Section: lisp
 Priority: extra
 Maintainer: Barak A. Pearlmutter <bap@debian.org>
 Build-Depends: debhelper (>= 7.2.5), autotools-dev, libgmp3-dev
-Standards-Version: 3.8.3
-Homepage: http://www.cs.indiana.edu/~aghuloum/ikarus/
-Vcs-Bzr: http://www.cs.indiana.edu/~aghuloum/ikarus.dev
+Standards-Version: 3.9.1
+Homepage: http://ikarus-scheme.org/
+Vcs-Git: git://git.debian.org/git/collab-maint/ikarus.git
+Vcs-Browser: http://git.debian.org/?p=collab-maint/ikarus.git
 
 Package: ikarus
 Architecture: i386
