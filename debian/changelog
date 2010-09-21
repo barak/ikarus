@@ -5,8 +5,9 @@ ikarus (0.0.3-6) unstable; urgency=low
     - bump debian standard
     - update upstream home page
     - pointer to debian git/collab-maint
+  * enable dh autotools_dev
 
- -- Barak A. Pearlmutter <bap@debian.org>  Mon, 20 Sep 2010 13:53:32 +0100
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue, 21 Sep 2010 10:51:46 +0100
 
 ikarus (0.0.3-5) unstable; urgency=low
 
