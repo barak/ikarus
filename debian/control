@@ -2,7 +2,9 @@ Source: ikarus
 Section: lisp
 Priority: extra
 Maintainer: Barak A. Pearlmutter <bap@debian.org>
-Build-Depends: debhelper (>= 7.2.5), autotools-dev, libgmp3-dev
+Build-Depends: debhelper (>= 7.2.5),
+	       autotools-dev (>= 20100122.1~),
+	       libgmp3-dev
 Standards-Version: 3.9.1
 Homepage: http://ikarus-scheme.org/
 Vcs-Git: git://git.debian.org/git/collab-maint/ikarus.git
