@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 build clean binary-indep binary-arch binary install:
-	dh $@ --with autotools_dev
+	dh $@ --with autotools_dev --parallel
 
 .PHONY: build clean binary-indep binary-arch binary install
 
