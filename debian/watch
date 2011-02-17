@@ -1,6 +1,2 @@
-# See uscan(1) for format
-
-# Compulsory line, this is a version 3 file
 version=3
-
-http://www.cs.indiana.edu/~aghuloum/ikarus/index.html ikarus-([0-9.]*)\.tar\.gz
+http://ikarus-scheme.org/index.html ikarus-([0-9.]*)\.tar\.gz
