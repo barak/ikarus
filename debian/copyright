@@ -2,7 +2,12 @@ This package was debianized by Barak A. Pearlmutter <bap@debian.org> on
 Sat,  3 Nov 2007 22:37:52 +0000.
 
 It was downloaded from
-http://www.cs.indiana.edu/~aghuloum/ikarus/ikarus-0.0.3.tar.gz
+  http://www.cs.indiana.edu/~aghuloum/ikarus/ikarus-0.0.3.tar.gz
+  but the official location is now http://ikarus-scheme.org/ikarus-0.0.3.tar.gz
+
+  See also:
+    main bzr repository: http://ikarus-scheme.org/ikarus.dev
+    mirror: http://bazaar.launchpad.net/~aghuloum/ikarus/ikarus.dev
 
 Upstream Author: Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
 
