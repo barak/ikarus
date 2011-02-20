@@ -13,4 +13,8 @@ package, and fonts in ttf-sil-charis, and the Geneva font which is not
 in Debian and would require a substitute.  The debian build process is
 set up to use the pre-built manual instead of regenerating it.
 
- -- Barak A. Pearlmutter <bap@debian.org>, Fri, 19 Sep 2008 13:08:52 +0100
+The upstream project has been forked, with the new fork names vicare.
+See http://marcomaggi.github.com/vicare.html
+for details, or git://github.com/marcomaggi/vicare for the source.
+
+ -- Barak A. Pearlmutter <bap@debian.org>, Sun, 20 Feb 2011 22:08:33 +0000
