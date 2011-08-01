@@ -1,9 +1,11 @@
 #!/usr/bin/make -f
 
-build clean binary-indep binary-arch binary install:
+dh_targets=binary binary-arch binary-indep build build-arch build-indep clean install
+
+$(dh_targets) %:
 	dh $@ --with autotools_dev --parallel
 
-.PHONY: build clean binary-indep binary-arch binary install
+.PHONY: $(dh_targets)
 
 override_dh_auto_build:
 	egrep -q '^flags[[:space:]]*:.*\bsse2\b' /proc/cpuinfo \
