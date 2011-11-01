@@ -1,0 +1,22 @@
+From: "Barak A. Pearlmutter" <barak+git@cs.nuim.ie>
+Date: Tue, 1 Nov 2011 12:44:12 +0000
+Subject: rand vs random
+
+---
+ src/ikarus-numerics.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/src/ikarus-numerics.c b/src/ikarus-numerics.c
+index 436e926..a6b871c 100644
+--- a/src/ikarus-numerics.c
++++ b/src/ikarus-numerics.c
+@@ -1739,7 +1739,7 @@ ikrt_fxrandom(ikptr x){
+     }
+   }
+   while(1){
+-    long r = random() & mask;
++    long r = rand() & mask;
+     if(r < n){
+       return fix(r);
+     }
+-- 

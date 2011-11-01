@@ -222,7 +222,7 @@ ik_mmap(int size){
       0,
       mapsize,
       PROT_READ | PROT_WRITE | PROT_EXEC,
-      MAP_PRIVATE | MAP_ANONYMOUS,
+      MAP_PRIVATE | MAP_ANON,
       -1,
       0);
   /* FIXME: check if in range */

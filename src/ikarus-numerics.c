@@ -1739,7 +1739,7 @@ ikrt_fxrandom(ikptr x){
     }
   }
   while(1){
-    long r = rand() & mask;
+    long r = random() & mask;
     if(r < n){
       return fix(r);
     }

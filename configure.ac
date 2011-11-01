@@ -1,9 +1,9 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.67])
-AC_INIT([ikarus],[0.0.3],[aghuloum@cs.indiana.edu])
-AC_CANONICAL_TARGET
+AC_PREREQ(2.59)
+AC_INIT(ikarus, 0.0.3, aghuloum@cs.indiana.edu)
+AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE(ikarus, 0.0.3)
 AC_CONFIG_SRCDIR([src/])
 
@@ -59,13 +59,12 @@ ERROR: libgmp.so) if libgmp is installed in a non-standard location.
 ERROR: libgmp can be obtained from <http://gmplib.org>. ])])
 
 # check that gmp is present
-AC_CHECK_LIB([gmp],[main],[],[AC_MSG_ERROR([
+AC_HAVE_LIBRARY([gmp],,[AC_MSG_ERROR([
 ERROR: Cannot find libgmp. 
 ERROR: You might want to supply CFLAGS=-I</path/to/include> (containing
 ERROR: the gmp.h header file), and LDFLAGS=-L</path/to/lib> (containing
 ERROR: libgmp.so) if libgmp is installed in a non-standard location.
-ERROR: libgmp can be obtained from <http://gmplib.org>. ])],[])ac_cv_lib_gmp=ac_cv_lib_gmp_main
-
+ERROR: libgmp can be obtained from <http://gmplib.org>. ])])
 
 # check that gmp exports mpn_mul
 # unfortunately, gmp.h defines mpn_mul as a macro

@@ -23,14 +23,6 @@
 #include <errno.h>
 #include <math.h>
 
-// To avoid a warning with GCC one must either
-// - invoke with -std=c99, or
-// - declare "extern double round(double);", or
-// - use the pre-C99 floor() and ceil(),
-//     double xx = flonum_data(x);
-//     flonum_data(y) = (xx>=0) ? floor(xx+0.5) : ceil(xx-0.5);
-// The last of these seems most portable.
-
 ikptr
 ikrt_fl_round(ikptr x, ikptr y){
   flonum_data(y) = round(flonum_data(x));

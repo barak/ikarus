@@ -1,0 +1,19 @@
+From: "Barak A. Pearlmutter" <barak+git@cs.nuim.ie>
+Date: Tue, 1 Nov 2011 12:33:29 +0000
+Subject: make no doc subdir
+
+---
+ Makefile.am |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 9d33980..844368a 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -1,4 +1,4 @@
+ AUTOMAKE_OPTIONS = foreign
+-SUBDIRS = src scheme doc lib benchmarks
++SUBDIRS = src scheme lib benchmarks
+ EXTRA_DIST = README COPYING GPL-3 ACKNOWLEDGMENTS
+ dist_doc_DATA=README COPYING GPL-3 ACKNOWLEDGMENTS
+-- 

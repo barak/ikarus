@@ -1,0 +1,40 @@
+From: "Barak A. Pearlmutter" <barak+git@cs.nuim.ie>
+Date: Tue, 1 Nov 2011 12:39:50 +0000
+Subject: includes
+
+---
+ src/ikarus-collect.c |    2 ++
+ src/ikarus-fasl.c    |    1 +
+ 2 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/src/ikarus-collect.c b/src/ikarus-collect.c
+index b6afd04..a78ef30 100644
+--- a/src/ikarus-collect.c
++++ b/src/ikarus-collect.c
+@@ -22,11 +22,13 @@
+ #include <stdint.h>
+ #include <unistd.h>   
+ #include <string.h>
++#include <strings.h>
+ #include <sys/mman.h>
+ #include <sys/types.h>
+ #include <sys/time.h>
+ #include <assert.h>
+ #include <errno.h>
++#include <sys/time.h>
+ 
+ #define forward_ptr ((ikptr)-1)
+ #define minimum_heap_size (pagesize * 1024 * 4)
+diff --git a/src/ikarus-fasl.c b/src/ikarus-fasl.c
+index 9a24588..935735c 100644
+--- a/src/ikarus-fasl.c
++++ b/src/ikarus-fasl.c
+@@ -25,6 +25,7 @@
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ #include <string.h>
++#include <strings.h>
+ #include <errno.h>
+ #include <unistd.h>
+ #include <assert.h>
+-- 

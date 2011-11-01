@@ -1,0 +1,50 @@
+From: "Barak A. Pearlmutter" <barak+git@cs.nuim.ie>
+Date: Tue, 1 Nov 2011 12:41:15 +0000
+Subject: map anon
+
+---
+ src/ikarus-main.c    |    2 +-
+ src/ikarus-runtime.c |    2 +-
+ src/ikarus-winmmap.c |    2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/ikarus-main.c b/src/ikarus-main.c
+index aa36789..78a2999 100644
+--- a/src/ikarus-main.c
++++ b/src/ikarus-main.c
+@@ -271,7 +271,7 @@ void
+ register_alt_stack(){
+ #if HAVE_SIGALTSTACK
+   char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC, 
+-                   MAP_PRIVATE|MAP_ANON, -1, 0);
++                   MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+ //  char* stk = ik_mmap(SIGSTKSZ);
+   if(stk == (char*)-1){
+     fprintf(stderr, "Cannot maloc an alt stack\n");
+diff --git a/src/ikarus-runtime.c b/src/ikarus-runtime.c
+index df907a5..d5660ee 100644
+--- a/src/ikarus-runtime.c
++++ b/src/ikarus-runtime.c
+@@ -222,7 +222,7 @@ ik_mmap(int size){
+       0,
+       mapsize,
+       PROT_READ | PROT_WRITE | PROT_EXEC,
+-      MAP_PRIVATE | MAP_ANON,
++      MAP_PRIVATE | MAP_ANONYMOUS,
+       -1,
+       0);
+   /* FIXME: check if in range */
+diff --git a/src/ikarus-winmmap.c b/src/ikarus-winmmap.c
+index c207e50..9f7a379 100644
+--- a/src/ikarus-winmmap.c
++++ b/src/ikarus-winmmap.c
+@@ -39,7 +39,7 @@ static size_t as = 0;
+ 
+ static void*
+ do_mmap(size_t n){
+-  void* x = mmap(0, n, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
++  void* x = mmap(0, n, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+   if(x == (void*)-1){
+     fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
+     exit(-1);
+-- 

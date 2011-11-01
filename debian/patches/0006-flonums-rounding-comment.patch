@@ -1,0 +1,28 @@
+From: "Barak A. Pearlmutter" <barak+git@cs.nuim.ie>
+Date: Tue, 1 Nov 2011 12:45:01 +0000
+Subject: flonums rounding comment
+
+---
+ src/ikarus-flonums.c |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/src/ikarus-flonums.c b/src/ikarus-flonums.c
+index f699c56..7043dc0 100644
+--- a/src/ikarus-flonums.c
++++ b/src/ikarus-flonums.c
+@@ -23,6 +23,14 @@
+ #include <errno.h>
+ #include <math.h>
+ 
++// To avoid a warning with GCC one must either
++// - invoke with -std=c99, or
++// - declare "extern double round(double);", or
++// - use the pre-C99 floor() and ceil(),
++//     double xx = flonum_data(x);
++//     flonum_data(y) = (xx>=0) ? floor(xx+0.5) : ceil(xx-0.5);
++// The last of these seems most portable.
++
+ ikptr
+ ikrt_fl_round(ikptr x, ikptr y){
+   flonum_data(y) = round(flonum_data(x));
+-- 
