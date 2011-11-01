@@ -279,10 +279,20 @@
   (set-rtd-fields! (base-rtd) '(name fields length printer symbol))
   (set-rtd-name! (base-rtd) "base-rtd")
   ($set-rtd-printer! (base-rtd)
-    (lambda (x p)
+    (lambda (x p wr)
       (unless (rtd? x)
         (die 'struct-type-printer "not an rtd"))
       (display "#<" p)
       (display (rtd-name x) p)
       (display " rtd>" p)))
   )
+
+
+(library (ikarus systems structs)
+  (export $struct-ref $struct/rtd?)
+  (import (ikarus))
+  (define $struct-ref struct-ref)
+  (define ($struct/rtd? x rtd)
+    (import (ikarus system $structs))
+    ($struct/rtd? x rtd)))
+

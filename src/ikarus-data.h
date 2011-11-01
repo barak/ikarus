@@ -72,20 +72,6 @@ extern int hash_table_count;
 #define weak_pairs_mt   (weak_pairs_type | scannable_tag   | dealloc_tag_un)
 
 
-static int 
-inthash(int key) {
-  key += ~(key << 15);
-  key ^=  (key >> 10);
-  key +=  (key << 3);
-  key ^=  (key >> 6);
-  key += ~(key << 11);
-  key ^=  (key >> 16);
-  return key;
-  return inthash(key);
-}
-
-
-
 #define pagesize 4096
 #define generation_count 5  /* generations 0 (nursery), 1, 2, 3, 4 */
 
@@ -121,6 +107,10 @@ typedef struct ik_ptr_page{
   ikptr ptr[ik_ptr_page_size];
 } ik_ptr_page;
 
+typedef struct callback_locative{
+  ikptr data;
+  struct callback_locative* next;
+} callback_locative;
 
 typedef struct ikpcb{
   /* the first locations may be accessed by some     */
@@ -140,20 +130,21 @@ typedef struct ikpcb{
   ikptr   collect_key;                  /* offset = 48 */
   /* the rest are not used by any scheme code        */
   /* they only support the runtime system (gc, etc.) */
+  callback_locative* callbacks;
   ikptr* root0;
   ikptr* root1;
   unsigned int* segment_vector; 
   ikptr weak_pairs_ap;
   ikptr weak_pairs_ep;
   ikptr   heap_base; 
-  int   heap_size;
+  unsigned long int   heap_size;
   ikpages* heap_pages;
   ikpage* cached_pages; /* pages cached so that we don't map/unmap */
   ikpage* uncached_pages; /* ikpages cached so that we don't malloc/free */
   ikptr cached_pages_base;
   int cached_pages_size;
   ikptr   stack_base;
-  int   stack_size;
+  unsigned long int   stack_size;
   ikptr   symbol_table;
   ikptr   gensym_table;
   ik_ptr_page* protected_list[generation_count];
@@ -167,22 +158,33 @@ typedef struct ikpcb{
   struct timeval collect_utime;
   struct timeval collect_stime;
   struct timeval collect_rtime; 
+  int last_errno;
 } ikpcb;
 
-ikpcb* ik_collect(int req, ikpcb* pcb);
+typedef struct {
+  ikptr tag;
+  ikptr top;
+  long int size;
+  ikptr next;
+} cont;
+
+
+
+
+ikpcb* ik_collect(unsigned long int, ikpcb*);
 void ikarus_usage_short(void);
 
 void* ik_malloc(int);
 void ik_free(void*, int);
 
-ikptr ik_mmap(int);
-ikptr ik_mmap_typed(int size, unsigned int type, ikpcb*);
-ikptr ik_mmap_ptr(int size, int gen, ikpcb*);
-ikptr ik_mmap_data(int size, int gen, ikpcb*);
-ikptr ik_mmap_code(int size, int gen, ikpcb*);
-ikptr ik_mmap_mixed(int size, ikpcb*);
-void ik_munmap(ikptr, int);
-void ik_munmap_from_segment(ikptr, int, ikpcb*);
+ikptr ik_mmap(unsigned long int);
+ikptr ik_mmap_typed(unsigned long int size, unsigned int type, ikpcb*);
+ikptr ik_mmap_ptr(unsigned long int size, int gen, ikpcb*);
+ikptr ik_mmap_data(unsigned long int size, int gen, ikpcb*);
+ikptr ik_mmap_code(unsigned long int size, int gen, ikpcb*);
+ikptr ik_mmap_mixed(unsigned long int size, ikpcb*);
+void ik_munmap(ikptr, unsigned long int);
+void ik_munmap_from_segment(ikptr, unsigned long int, ikpcb*);
 ikpcb* ik_make_pcb();
 void ik_delete_pcb(ikpcb*);
 void ik_free_symbol_table(ikpcb* pcb);
@@ -190,7 +192,7 @@ void ik_free_symbol_table(ikpcb* pcb);
 void ik_fasl_load(ikpcb* pcb, char* filename);
 void ik_relocate_code(ikptr);
 
-ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr);
+ikptr ik_exec_code(ikpcb* pcb, ikptr code_ptr, ikptr argcount, ikptr cp);
 void ik_print(ikptr x);
 void ik_fprint(FILE*, ikptr x);
 
@@ -199,16 +201,24 @@ ikptr ikrt_strings_to_gensym(ikptr, ikptr,  ikpcb*);
 
 ikptr ik_cstring_to_symbol(char*, ikpcb*);
 
-ikptr ik_asm_enter(ikpcb*, ikptr code_object, ikptr arg);
+ikptr ik_asm_enter(ikpcb*, ikptr code_object, ikptr arg, ikptr cp);
 ikptr ik_asm_reenter(ikpcb*, ikptr code_object, ikptr val);
 ikptr ik_underflow_handler(ikpcb*);
 ikptr ik_unsafe_alloc(ikpcb* pcb, int size);
 ikptr ik_safe_alloc(ikpcb* pcb, int size);
 
-#define IK_HEAP_EXT_SIZE  (32 * 4096)
-#define IK_HEAPSIZE       (1024 * 4096) /* 4 MB */
+ikptr u_to_number(unsigned long, ikpcb*);
+ikptr ull_to_number(unsigned long long, ikpcb*);
+ikptr normalize_bignum(long int limbs, int sign, ikptr r);
+ikptr s_to_number(signed long x, ikpcb* pcb);
+ikptr d_to_number(double x, ikpcb* pcb);
+ikptr make_pointer(long x, ikpcb* pcb);
+long long extract_num_longlong(ikptr x);
 
-#define wordsize (sizeof(ikptr))
+#define IK_HEAP_EXT_SIZE  (32 * 4096)
+#define IK_HEAPSIZE       (1024 * ((wordsize==4)?1:2) * 4096) /* 4/8 MB */
+
+#define wordsize ((int)(sizeof(ikptr)))
 #define wordshift ((wordsize == 4)?2:3)
 #define align_shift (wordshift + 1) 
 #define align_size (2 * wordsize)
@@ -239,7 +249,7 @@ ikptr ik_safe_alloc(ikpcb* pcb, int size);
 #define is_fixnum(x) ((((unsigned long)(x)) & fx_mask) == 0)
 
 #define ref(x,n) \
-  (((ikptr*)(((char*)(long int)(x)) + ((long int)(n))))[0])
+  (((ikptr*)(((long int)(x)) + ((long int)(n))))[0])
 
 #define tagof(x) (((int)(x)) & 7)
 
@@ -340,6 +350,12 @@ ikptr ik_safe_alloc(ikpcb* pcb, int size);
 #define disp_continuation_next  (3 * wordsize)
 #define continuation_size       (4 * wordsize)
 
+#define system_continuation_tag         ((ikptr) 0x11F)
+#define disp_system_continuation_top     (1 * wordsize)
+#define disp_system_continuation_next    (2 * wordsize)
+#define disp_system_continuation_unused  (3 * wordsize)
+#define system_continuation_size         (4 * wordsize)
+
 #define off_continuation_top   (disp_continuation_top  - vector_tag) 
 #define off_continuation_size  (disp_continuation_size - vector_tag)
 #define off_continuation_next  (disp_continuation_next - vector_tag)
@@ -391,7 +407,24 @@ ikptr ik_safe_alloc(ikpcb* pcb, int size);
 #define disp_ratnum_unused  (3 * wordsize)
 #define ratnum_size         (4 * wordsize)
 
+#define compnum_tag           ((ikptr) 0x37)
+#define disp_compnum_real     (1 * wordsize)
+#define disp_compnum_imag     (2 * wordsize)
+#define disp_compnum_unused   (3 * wordsize)
+#define compnum_size          (4 * wordsize)
+
+#define cflonum_tag           ((ikptr) 0x47)
+#define disp_cflonum_real     (1 * wordsize)
+#define disp_cflonum_imag     (2 * wordsize)
+#define disp_cflonum_unused   (3 * wordsize)
+#define cflonum_size          (4 * wordsize)
+
 #define ik_eof_p(x) ((x) == ik_eof_object)
 #define page_index(x) (((unsigned long int)(x)) >> pageshift)
+
+#define pointer_tag           ((ikptr) 0x107)
+#define disp_pointer_data     (1 * wordsize)
+#define pointer_size          (2 * wordsize)
+#define off_pointer_data      (disp_pointer_data - vector_tag)
 
 #endif

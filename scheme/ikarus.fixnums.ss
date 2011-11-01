@@ -26,13 +26,17 @@
           fixnum->string 
           fxarithmetic-shift-left fxarithmetic-shift-right fxarithmetic-shift
           fxmin fxmax
-          error@fx+)
+          error@fx+ error@fx* error@fx- error@fxadd1 error@fxsub1
+
+          error@fxarithmetic-shift-left
+          error@fxarithmetic-shift-right
+          )
   (import 
     (ikarus system $fx)
     (ikarus system $chars)
     (ikarus system $pairs)
     (ikarus system $strings)
-    (prefix (only (ikarus) fx+) sys:)
+    (prefix (only (ikarus) fx+ fx* fx-) sys:)
     (except (ikarus) fxzero? fxadd1 fxsub1 fxlognot fx+ fx- fx*
             fxquotient fxremainder fxmodulo fxlogor fxlogand
             fxlogxor fxsll fxsra fx= fx< fx<= fx> fx>=
@@ -45,6 +49,14 @@
             fxmin fxmax
             fixnum->string))
 
+  (define (die/overflow who . args)
+    (raise
+      (condition
+        (make-implementation-restriction-violation)
+        (make-who-condition who)
+        (make-message-condition "overflow")
+        (make-irritants-condition args))))
+
   (define fxzero?
     (lambda (x)
       (cond
@@ -52,17 +64,6 @@
         [(fixnum? x) #f]
         [else (die 'fxzero? "not a fixnum" x)])))
   
-  (define fxadd1
-    (lambda (n)
-      (if (fixnum? n)
-          ($fxadd1 n)
-          (die 'fxadd1 "not a fixnum" n))))
-  
-  (define fxsub1 
-    (lambda (n) 
-      (if (fixnum? n)
-          ($fxsub1 n)
-          (die 'fxsub1 "not a fixnum" n))))
 
   (define fxlognot 
     (lambda (x)
@@ -76,34 +77,43 @@
         (die 'fxnot "not a fixnum" x))
       ($fxlognot x)))
   
-  (define error@fx+
-    (lambda (x y) 
-      (if (fixnum? x) 
-          (if (fixnum? y) 
-              (die 'fx+ "overflow when adding numbers" x y)
-              (die 'fx+ "not a fixnum" y))
-          (die 'fx+ "not a fixnum" x))))
+  (define (make-fx-error who)
+    (case-lambda
+      [(x y)
+       (if (fixnum? x)
+           (if (fixnum? y) 
+               (die/overflow who x y)
+               (die who "not a fixnum" y))
+           (die who "not a fixnum" x))]
+      [(x) 
+       (if (fixnum? x)
+           (die/overflow who x)
+           (die who "not a fixnum" x))]))
 
-  (define fx+ 
-    (lambda (x y) 
-      (sys:fx+ x y)))
+  (define error@fx+    (make-fx-error 'fx+))
+  (define error@fx-    (make-fx-error 'fx-))
+  (define error@fx*    (make-fx-error 'fx*))
+  (define error@fxadd1 (make-fx-error 'fxadd1))
+  (define error@fxsub1 (make-fx-error 'fxsub1))
+
+  (define (fx+ x y) (sys:fx+ x y))
+
+  (define (fx* x y) (sys:fx* x y))
 
   (define fx-
-    (lambda (x y) 
-      (unless (fixnum? x)
-        (die 'fx- "not a fixnum" x))
-      (unless (fixnum? y)
-        (die 'fx- "not a fixnum" y))
-      ($fx- x y)))
+    (case-lambda
+      [(x y) (sys:fx- x y)]
+      [(x)   (sys:fx- x)]))
 
-  (define fx*
-    (lambda (x y) 
-      (unless (fixnum? x)
-        (die 'fx* "not a fixnum" x))
-      (unless (fixnum? y)
-        (die 'fx* "not a fixnum" y))
-      ($fx* x y)))
+  (define fxadd1
+    (lambda (n)
+      (import (ikarus))
+      (fxadd1 n)))
   
+  (define fxsub1 
+    (lambda (n) 
+      (import (ikarus))
+      (fxsub1 n)))
 
   (define false-loop
     (lambda (who ls)
@@ -162,7 +172,11 @@
         (die 'fxquotient "not a fixnum" y))
       (when ($fxzero? y)
         (die 'fxquotient "zero dividend" y))
-      ($fxquotient x y))) 
+      (if (eq? y -1)
+          (if (eq? x (least-fixnum))
+              (die/overflow 'fxquotient x y)
+              ($fx- 0 x))
+          ($fxquotient x y))))
   
   (define fxremainder
     (lambda (x y) 
@@ -242,13 +256,8 @@
 
   (define fxarithmetic-shift-right
     (lambda (x y) 
-      (unless (fixnum? x)
-        (die 'fxarithmetic-shift-right "not a fixnum" x))
-      (unless (fixnum? y)
-        (die 'fxarithmetic-shift-right "not a fixnum" y))
-      (unless ($fx>= y 0)
-        (die 'fxarithmetic-shift-right "negative shift not allowed" y))
-      ($fxsra x y)))
+      (import (ikarus))
+      (fxarithmetic-shift-right x y)))
 
   (define fxsll
     (lambda (x y) 
@@ -261,30 +270,47 @@
       ($fxsll x y))) 
 
 
+  (define (error@fxarithmetic-shift who x y)
+    (unless (fixnum? x)
+      (die who "not a fixnum" x))
+    (unless (fixnum? y)
+      (die who "not a fixnum" y))
+    (unless ($fx>= y 0)
+      (die who "negative shift not allowed" y))
+    (unless ($fx< y (fixnum-width))
+      (die who "shift is not less than fixnum-width" y))
+    (die/overflow who x y))
+ 
+  (define (error@fxarithmetic-shift-left x y)
+    (error@fxarithmetic-shift 'arithmetic-shift-left x y))
+
+  (define (error@fxarithmetic-shift-right x y)
+    (error@fxarithmetic-shift 'arithmetic-shift-right x y))
+
   (define fxarithmetic-shift-left
-    (lambda (x y) 
-      (unless (fixnum? x)
-        (die 'fxarithmetic-shift-left "not a fixnum" x))
-      (unless (fixnum? y)
-        (die 'fxarithmetic-shift-left "not a fixnum" y))
-      (unless ($fx>= y 0)
-        (die 'fxarithmetic-shift-left "negative shift not allowed" y))
-      ($fxsll x y)))
+    (lambda (x y)
+      (import (ikarus))
+      (fxarithmetic-shift-left x y)))
 
   (define fxarithmetic-shift
     (lambda (x y) 
-      (unless (fixnum? x)
-        (die 'fxarithmetic-shift "not a fixnum" x))
-      (unless (fixnum? y)
-        (die 'fxarithmetic-shift "not a fixnum" y))
+      (import (ikarus))
+      (define (err str x) (die 'fxarithmetic-shift str x))
+      (unless (fixnum? x) (err "not a fixnum" x))
+      (unless (fixnum? y) (err "not a fixnum" y))
       (if ($fx>= y 0)
-          ($fxsll x y)
-          (if ($fx< x -100) ;;; arbitrary number < (fixnum-width)
-              ($fxsra x 32)
-              ($fxsra x ($fx- 0 y))))))
+          (if ($fx< y (fixnum-width))
+              (let ([r ($fxsll x y)])
+                (if ($fx= x ($fxsra r y))
+                    r
+                    (die/overflow 'fxarithmetic-shift x y)))
+              (err "invalid shift amount" y))
+          (if ($fx> y (- (fixnum-width)))
+              ($fxsra x ($fx- 0 y))
+              (err "invalid shift amount" y)))))
 
   (define (fxpositive? x)
-    (if (fixnum? x) 
+    (if (fixnum? x)
         ($fx> x 0)
         (die 'fxpositive? "not a fixnum" x)))
 
@@ -349,19 +375,26 @@
              (die 'fxmax "not a fixnum" z)))]
       [(x) (if (fixnum? x) x (die 'fxmax "not a fixnum" x))]))
 
-  (define (fx*/carry fx1 fx2 fx3)
+  (define-syntax define-fx
+    (syntax-rules ()
+      [(_ (name arg* ...) body)
+       (define (name arg* ...)
+         (unless (fixnum? arg*) (die 'name "not a fixnum" arg*)) ...
+         body)]))
+
+  (define-fx (fx*/carry fx1 fx2 fx3)
     (let ([s0 ($fx+ ($fx* fx1 fx2) fx3)])
       (values 
         s0
         (sra (+ (* fx1 fx2) (- fx3 s0)) (fixnum-width)))))
   
-  (define (fx+/carry fx1 fx2 fx3)
+  (define-fx (fx+/carry fx1 fx2 fx3)
     (let ([s0 ($fx+ ($fx+ fx1 fx2) fx3)])
       (values 
         s0
         (sra (+ (+ fx1 fx2) (- fx3 s0)) (fixnum-width)))))
   
-  (define (fx-/carry fx1 fx2 fx3)
+  (define-fx (fx-/carry fx1 fx2 fx3)
     (let ([s0 ($fx- ($fx- fx1 fx2) fx3)])
       (values 
         s0
@@ -450,32 +483,29 @@
                 ($fx+ m0 m)
                 ($fx- m0 m))))))
 
-  (define (fxdiv-and-mod x y)
-    (if (fixnum? x) 
-        (if (fixnum? y) 
-            (if ($fx= y 0) 
-                (die 'fxdiv-and-mod "division by 0")
-                ($fxdiv-and-mod x y))
-            (die 'fxdiv-and-mod "not a fixnum" y))
-        (die 'fxdiv-and-mod "not a fixnum" x)))
+  (define-syntax define-div-proc
+    (syntax-rules ()
+      [(_ who $unsafe-op overflow-check?)
+       (define (who x y)
+         (if (fixnum? x)
+             (if (fixnum? y)
+                 (if ($fx> y 0) 
+                     ($unsafe-op x y)
+                     (if ($fx= y 0)
+                         (die 'who "division by 0" x y)
+                         (if (and overflow-check? ($fx= y -1))
+                             (if ($fx= x (least-fixnum))
+                                 (die 'who "result not representable as fixnum"
+                                      x y)
+                                 ($unsafe-op x y))
+                             ($unsafe-op x y))))
+                 (die 'who "not a fixnum" y))
+             (die 'who "not a fixnum" x)))]))
 
-  (define (fxdiv x y)
-    (if (fixnum? x) 
-        (if (fixnum? y) 
-            (if ($fx= y 0) 
-                (die 'fxdiv "division by 0")
-                ($fxdiv x y))
-            (die 'fxdiv "not a fixnum" y))
-        (die 'fxdiv "not a fixnum" x)))
+  (define-div-proc fxdiv $fxdiv #t)
+  (define-div-proc fxmod $fxmod #f)
+  (define-div-proc fxdiv-and-mod $fxdiv-and-mod #t)
 
-  (define (fxmod x y)
-    (if (fixnum? x) 
-        (if (fixnum? y) 
-            (if ($fx= y 0) 
-                (die 'fxmod "modision by 0")
-                ($fxmod x y))
-            (die 'fxmod "not a fixnum" y))
-        (die 'fxmod "not a fixnum" x)))
 
   (define ($fxdiv0-and-mod0 n m)
     (let ([d0 (quotient n m)])
@@ -564,5 +594,32 @@
             (die 'fxmod0 "not a fixnum" y))
         (die 'fxmod0 "not a fixnum" x)))
   )
+
+
+(library (ikarus fixnums unsafe)
+  (export $fxzero? $fxadd1 $fxsub1 
+    $fx+ $fx* $fx- $fx= $fx< $fx<= $fx> $fx>=
+    $fxsll $fxsra $fxlogor $fxlogand $fxlognot)
+  (import (ikarus))
+  (define $fxzero? fxzero?)
+  (define $fxadd1 fxadd1)
+  (define $fxsub1 fxsub1)
+  (define $fx+ fx+)
+  (define $fx* fx*)
+  (define $fx- fx-)
+  (define $fx= fx=)
+  (define $fx< fx<)
+  (define $fx<= fx<=)
+  (define $fx> fx>)
+  (define $fx>= fx>=)
+  (define $fxsll fxsll)
+  (define $fxsra fxsra)
+  (define $fxlogor fxlogor)
+  (define $fxlogand fxlogand)
+  (define $fxlognot fxlognot))
+  
+ 
+
+
 
 

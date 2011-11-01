@@ -32,14 +32,18 @@ make_symbol_table(ikpcb* pcb){
   return st;
 }
 
+
+/* one-at-a-time from http://burtleburtle.net/bob/hash/doobs.html */
 static long int 
 compute_hash(ikptr str){
   long int len = unfix(ref(str, off_string_length));
-  char* data = (char*)(long) str + off_string_data;
-  long int h = len;
-  char* last = data + len * string_char_size;
+  int* data = (int*)(str + off_string_data);
+  int h = len;
+  int* last = data + len;
+
+  /* one-at-a-time */
   while(data < last){
-    char c = *data;
+    int c = (*data >> 8);
     h = h + c;
     h = h + (h << 10);
     h = h ^ (h >> 6);
@@ -48,7 +52,7 @@ compute_hash(ikptr str){
   h = h + (h << 3);
   h = h ^ (h >> 11);
   h = h + (h << 15);
-  return h;
+  return (h >= 0) ? h : (1 - h);
 }
 
 ikptr 
@@ -68,22 +72,6 @@ static int strings_eqp(ikptr str1, ikptr str2){
   return 0;
 }
 
-#if 0
-static ikptr 
-ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
-  ikptr sym = ik_unsafe_alloc(pcb, symbol_size) + symbol_tag;
-  ref(sym, off_symbol_string)  = str;
-  ref(sym, off_symbol_ustring) = ustr;
-  ref(sym, off_symbol_value)   = unbound_object;
-  ref(sym, off_symbol_plist)   = null_object;
-  ref(sym, off_symbol_system_value) = str;
-  ref(sym, off_symbol_code) = 0;
-  ref(sym, off_symbol_errcode) = 0;
-  ref(sym, off_symbol_unused) = 0;
-  return sym;
-}
-#endif
-
 static ikptr 
 ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
   ikptr sym = ik_unsafe_alloc(pcb, symbol_record_size) + record_tag;
@@ -95,8 +83,6 @@ ik_make_symbol(ikptr str, ikptr ustr, ikpcb* pcb){
   ref(sym, off_symbol_record_plist)   = null_object;
   return sym;
 }
-
-
 
 static ikptr
 intern_string(ikptr str, ikptr st, ikpcb* pcb){
@@ -173,11 +159,54 @@ ikrt_intern_gensym(ikptr sym, ikpcb* pcb){
 }
 
 
+ikptr
+ikrt_unintern_gensym(ikptr sym, ikpcb* pcb){
+  ikptr st = pcb->gensym_table;
+  if(st == 0){
+    /* no symbol table */
+    return false_object;
+  }
+  ikptr ustr = ref(sym, off_symbol_record_ustring);
+  if (tagof(ustr) != string_tag) {
+    return false_object;
+  }
+  int h = compute_hash(ustr);
+  int idx = h & (unfix(ref(st, off_vector_length)) - 1);
+  ikptr loc = (ikptr)(st+off_vector_data+idx*wordsize);
+  ikptr bckt = ref(loc, 0);
+  while(bckt){
+    if (ref(bckt, off_car) == sym) {
+      /* found it */
+      ref(sym, off_symbol_record_ustring) = true_object;
+      ref(loc, 0) = ref(bckt, off_cdr);
+      return true_object;
+    } else {
+      loc = (ikptr)(bckt + off_cdr);
+      bckt = ref(loc, 0);
+    }
+  }
+  return false_object;
+}
+
+ikptr
+ikrt_get_symbol_table(ikpcb* pcb){
+  ikptr st = pcb->symbol_table;
+  pcb->symbol_table = false_object;
+  if(st == false_object) {
+    fprintf(stderr, "bug in ikarus, attempt to access dead symbol table\n");
+    exit(-1);
+  }
+  return st;
+}
 
 
 ikptr 
 ikrt_string_to_symbol(ikptr str, ikpcb* pcb){
   ikptr st = pcb->symbol_table;
+  if(st == false_object) {
+    fprintf(stderr, "bug in ikarus, attempt to access dead symbol table\n");
+    exit(-1);
+  }
   if(st == 0){
     st = make_symbol_table(pcb);
     pcb->symbol_table = st;
@@ -201,15 +230,3 @@ ikrt_strings_to_gensym(ikptr str, ikptr ustr, ikpcb* pcb){
 }
 
 
-#if 0
-ikptr
-ik_cstring_to_symbol(char* str, ikpcb* pcb){
-  int n = strlen(str);
-  int size = n + disp_string_data + 1;
-  ikptr s = ik_unsafe_alloc(pcb, align(size)) + string_tag;
-  ref(s, off_string_length) = fix(n);
-  memcpy(s+off_string_data, str, n+1);
-  ikptr sym = ikrt_string_to_symbol(s, pcb);
-  return sym;
-}
-#endif

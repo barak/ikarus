@@ -51,6 +51,8 @@
           no-infinities-violation? make-no-infinities-violation
           no-nans-violation? make-no-nans-violation
           interrupted-condition? make-interrupted-condition 
+          make-source-position-condition source-position-condition?
+          source-position-file-name source-position-character
 
           &condition-rtd &condition-rcd &message-rtd &message-rcd
           &warning-rtd &warning-rcd &serious-rtd &serious-rcd
@@ -72,13 +74,7 @@
           &i/o-encoding-rcd &no-infinities-rtd &no-infinities-rcd
           &no-nans-rtd &no-nans-rcd
           &interrupted-rtd &interrupted-rcd 
-
-
-          &i/o-would-block-rtd
-          &i/o-would-block-rcd
-          make-i/o-would-block-condition
-          i/o-would-block-condition?
-          i/o-would-block-port
+          &source-position-rtd &source-position-rcd
           )
   (import
     (rnrs records inspection)
@@ -132,14 +128,14 @@
           no-infinities-violation? make-no-infinities-violation
           no-nans-violation? make-no-nans-violation
           
-          &i/o-would-block
-          make-i/o-would-block-condition
-          i/o-would-block-condition?
-          i/o-would-block-port
+          interrupted-condition? make-interrupted-condition 
+          make-source-position-condition source-position-condition?
+          source-position-file-name source-position-character
           ))
   
   (define-record-type &condition 
     (nongenerative))
+
   (define &condition-rtd (record-type-descriptor &condition))
   (define &condition-rcd (record-constructor-descriptor &condition))
   
@@ -147,7 +143,7 @@
     (nongenerative)
     (fields (immutable components))
     (sealed #t)
-    (opaque #t))
+    (opaque #f))
 
   (define (condition? x)
     (or (&condition? x)
@@ -311,7 +307,7 @@
     make-i/o-filename-error i/o-filename-error?
     (filename i/o-error-filename))
 
-  (define-condition-type &i/o-file-protection &i/o
+  (define-condition-type &i/o-file-protection &i/o-filename
     make-i/o-file-protection-error i/o-file-protection-error?)
 
   (define-condition-type &i/o-file-is-read-only &i/o-file-protection
@@ -341,38 +337,49 @@
     make-no-nans-violation no-nans-violation?)
 
   ;;; ikarus-specific conditions
-  (define-condition-type &interrupted &condition
+  (define-condition-type &interrupted &serious
     make-interrupted-condition interrupted-condition?)
 
-  (define-condition-type &i/o-would-block &condition
-    make-i/o-would-block-condition i/o-would-block-condition?
-    (port i/o-would-block-port))
+  (define-condition-type &source-position &condition
+    make-source-position-condition source-position-condition?
+    (file-name source-position-file-name)
+    (character source-position-character))
 
   (define print-condition 
     (let ()
       (define (print-simple-condition x p)
-        (let f ([rtd (record-rtd x)])
+        (let* ([rtd (record-rtd x)]
+               [rf (let l ([rtd rtd] [accum '()])
+                     (if rtd
+                       (l (record-type-parent rtd) 
+                          (cons 
+                            (cons rtd (record-type-field-names rtd))
+                            accum))
+                       (remp (lambda (a) (zero? (vector-length (cdr a))))
+                             accum)))]
+               [rf-len (apply + (map vector-length 
+                                     (map cdr rf)))])
           (let ([name (record-type-name rtd)])
-            (display name p))
-          (let ([v (record-type-field-names rtd)])
-            (case (vector-length v)
-              [(0) (newline p)]
-              [(1) 
-               (display ": " p)
-               (write ((record-accessor rtd 0) x) p)
-               (newline p)]
-              [else
-               (display ":\n" p)
-               (let f ([i 0])
-                 (unless (= i (vector-length v))
-                   (display "       " p)
-                   (display (vector-ref v i) p)
-                   (display ": " p)
-                   (write ((record-accessor rtd i) x) p)
-                   (newline)
-                   (f (+ i 1))))]))))
-          ;; (let ([parent (record-type-parent rtd)])
-          ;;   (when parent (f parent)))))
+            (display name p))          
+          (case rf-len
+            [(0) (newline p)]
+            [(1) 
+             (display ": " p)
+             (write ((record-accessor (caar rf) 0) x) p)
+             (newline p)]
+            [else
+             (display ":\n" p)
+             (for-each
+               (lambda (a)
+                 (let f ([i 0] [rtd (car a)] [v (cdr a)])
+                   (unless (= i (vector-length v))
+                     (display "       " p)
+                     (display (vector-ref v i) p)
+                     (display ": " p)
+                     (write ((record-accessor rtd i) x) p)
+                     (newline p)
+                     (f (+ i 1) rtd v))))
+               rf)])))
       (define (print-condition x p)
         (cond
           [(condition? x) 
@@ -389,7 +396,7 @@
                        (print-simple-condition (car ls) p)
                        (f (cdr ls) (+ i 1)))))))]
           [else 
-           (display "Non-condition object: " p)
+           (display " Non-condition object: " p)
            (write x p)
            (newline p)]))
       (case-lambda

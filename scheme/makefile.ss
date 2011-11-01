@@ -16,14 +16,26 @@
 
 ;;; vim:syntax=scheme
 (import (only (ikarus) import))
-(import (except (ikarus) assembler-output))
-(import (ikarus compiler))
+(import (except (ikarus) 
+          current-letrec-pass
+          current-core-eval
+          assembler-output optimize-cp optimize-level
+          cp0-size-limit cp0-effort-limit expand/optimize
+          expand/scc-letrec expand
+          optimizer-output tag-analysis-output perform-tag-analysis))
+(import (ikarus.compiler))
 (import (except (psyntax system $bootstrap)
-                eval-core
+                eval-core 
                 current-primitive-locations
                 compile-core-expr-to-port))
-(import (ikarus compiler)) ; just for fun
+(import (ikarus.compiler)) ; just for fun
+(optimize-level 2)
+(perform-tag-analysis #t)
+(pretty-width 160)
+((pretty-format 'fix) ((pretty-format 'letrec)))
+(strip-source-info #t)
 
+(current-letrec-pass 'scc)
 (define scheme-library-files
   ;;; Listed in the order in which they're loaded.
   ;;;
@@ -41,7 +53,9 @@
   ;;;  an error (which may lead to the infamous Error: Error: 
   ;;;  Error: Error: Error: Error: Error: Error: Error: ...).
   ;;;
-  '("ikarus.singular-objects.ss"
+  '(
+    
+    "ikarus.singular-objects.ss"
     "ikarus.handlers.ss"
     "ikarus.multiple-values.ss"
     "ikarus.control.ss"
@@ -49,6 +63,7 @@
     "ikarus.collect.ss"
     "ikarus.apply.ss"
     "ikarus.predicates.ss"
+    "ikarus.equal.ss"
     "ikarus.pairs.ss"
     "ikarus.lists.ss"
     "ikarus.fixnums.ss"
@@ -60,20 +75,23 @@
     "ikarus.date-string.ss"
     "ikarus.symbols.ss"
     "ikarus.vectors.ss"
-    "ikarus.unicode-data.ss"
+    "ikarus.unicode.ss"
+    "ikarus.string-to-number.ss"
     "ikarus.numerics.ss"
     "ikarus.conditions.ss"
     "ikarus.guardians.ss"
-    "ikarus.command-line.ss"
+    "ikarus.symbol-table.ss"
     "ikarus.codecs.ss"
     "ikarus.bytevectors.ss"
+    "ikarus.posix.ss"
     "ikarus.io.ss"
     "ikarus.hash-tables.ss"
+    "ikarus.pretty-formats.ss"
     "ikarus.writer.ss"
     "ikarus.reader.ss"
+    "ikarus.reader.annotated.ss"
     "ikarus.code-objects.ss"
     "ikarus.intel-assembler.ss"
-    "ikarus.trace.ss"
     "ikarus.fasl.write.ss"
     "ikarus.fasl.ss"
     "ikarus.compiler.ss"
@@ -83,28 +101,36 @@
     "psyntax.config.ss"
     "psyntax.builders.ss"
     "psyntax.expander.ss"
+    "ikarus.apropos.ss"
     "ikarus.load.ss"
     "ikarus.pretty-print.ss"
     "ikarus.cafe.ss"
-    "ikarus.posix.ss"
     "ikarus.timer.ss"
     "ikarus.time-and-date.ss"
     "ikarus.sort.ss"
     "ikarus.promises.ss"
     "ikarus.enumerations.ss"
+    "ikarus.command-line.ss"
+    "ikarus.pointers.ss"
+    "ikarus.not-yet-implemented.ss"
+    ;"ikarus.trace.ss"
+    "ikarus.debugger.ss"
     "ikarus.main.ss"
     ))
 
 (define ikarus-system-macros
   '([define              (define)]
     [define-syntax       (define-syntax)]
+    [define-fluid-syntax (define-fluid-syntax)]
     [module              (module)]
     [library             (library)]
     [begin               (begin)]
     [import              (import)]
+    [export              (export)]
     [set!                (set!)]
     [let-syntax          (let-syntax)]
     [letrec-syntax       (letrec-syntax)]
+    [stale-when          (stale-when)]
     [foreign-call        (core-macro . foreign-call)]
     [quote               (core-macro . quote)]
     [syntax-case         (core-macro . syntax-case)]
@@ -115,22 +141,21 @@
     [letrec              (core-macro . letrec)]
     [letrec*             (core-macro . letrec*)]
     [if                  (core-macro . if)]
-    [when                (core-macro . when)]         
-    [unless              (core-macro . unless)]
-    [parameterize        (core-macro . parameterize)]
-    [case                (core-macro . case)]
+    [fluid-let-syntax    (core-macro . fluid-let-syntax)]
     [record-type-descriptor (core-macro . record-type-descriptor)]
     [record-constructor-descriptor (core-macro . record-constructor-descriptor)]
     [let-values          (macro . let-values)]
     [let*-values         (macro . let*-values)]
     [define-struct       (macro . define-struct)]
-    [include             (macro . include)]
-    [include-into        (macro . include-into)]
+    [case                (macro . case)]
     [syntax-rules        (macro . syntax-rules)]
     [quasiquote          (macro . quasiquote)]
     [quasisyntax         (macro . quasisyntax)]
     [with-syntax         (macro . with-syntax)]
     [identifier-syntax   (macro . identifier-syntax)]
+    [parameterize        (macro . parameterize)]
+    [when                (macro . when)]         
+    [unless              (macro . unless)]
     [let                 (macro . let)]
     [let*                (macro . let*)]
     [cond                (macro . cond)]
@@ -150,8 +175,11 @@
     [unsyntax            (macro . unsyntax)]
     [unsyntax-splicing   (macro . unsyntax-splicing)]
     [trace-lambda        (macro . trace-lambda)]
+    [trace-let           (macro . trace-let)]
     [trace-define        (macro . trace-define)]
     [trace-define-syntax (macro . trace-define-syntax)]
+    [trace-let-syntax    (macro . trace-let-syntax)]
+    [trace-letrec-syntax (macro . trace-letrec-syntax)]
     [guard               (macro . guard)]
     [eol-style           (macro . eol-style)]
     [buffer-mode         (macro . buffer-mode)]
@@ -189,7 +217,7 @@
     [&i/o-invalid-position     ($core-rtd . (&i/o-invalid-position-rtd &i/o-invalid-position-rcd ))]
     [&i/o-filename             ($core-rtd . (&i/o-filename-rtd &i/o-filename-rcd))]
     [&i/o-file-protection      ($core-rtd . (&i/o-file-protection-rtd &i/o-file-protection-rcd))]
-    [&i/o-file-is-read-only    ($core-rtd . (&i/o-file-is-read-only-rtd &i/o-fie-is-read-only-rcd ))]
+    [&i/o-file-is-read-only    ($core-rtd .  (&i/o-file-is-read-only-rtd &i/o-file-is-read-only-rcd ))]
     [&i/o-file-already-exists  ($core-rtd . (&i/o-file-already-exists-rtd &i/o-file-already-exists-rcd))]
     [&i/o-file-does-not-exist  ($core-rtd . (&i/o-file-does-not-exist-rtd &i/o-file-does-not-exist-rcd))]
     [&i/o-port                 ($core-rtd . (&i/o-port-rtd &i/o-port-rcd))]
@@ -198,6 +226,7 @@
     [&no-infinities            ($core-rtd . (&no-infinities-rtd &no-infinities-rcd ))]
     [&no-nans                  ($core-rtd . (&no-nans-rtd &no-nans-rcd))]
     [&interrupted              ($core-rtd . (&interrupted-rtd &interrupted-rcd))]
+    [&source                   ($core-rtd . (&source-rtd &source-rcd))]
     ))
 
 (define library-legend
@@ -206,7 +235,6 @@
     [cm          (chez modules)                        #t     #t]
     [symbols     (ikarus symbols)                      #t     #t]
     [parameters  (ikarus parameters)                   #t     #t]
-    [interaction (ikarus interaction)                  #t     #t]
     [r           (rnrs)                                #t     #t]
     [r5          (rnrs r5rs)                           #t     #t]
     [ct          (rnrs control)                        #t     #t]
@@ -244,6 +272,7 @@
     [$transc     (ikarus system $transcoders)          #f     #t]
     [$fx         (ikarus system $fx)                   #f     #t]
     [$rat        (ikarus system $ratnums)              #f     #t]
+    [$comp       (ikarus system $compnums)             #f     #t]
     [$symbols    (ikarus system $symbols)              #f     #t]
     [$structs    (ikarus system $structs)              #f     #t]
     ;[$ports      (ikarus system $ports)                #f     #t]
@@ -253,7 +282,7 @@
     [$stack      (ikarus system $stack)                #f     #t]
     [$interrupts (ikarus system $interrupts)           #f     #t]
     [$io         (ikarus system $io)                   #f     #t]
-    [interrupts  (ikarus system interrupts)            #f     #t]
+    [$for        (ikarus system $foreign)              #f     #t]
     [$all        (psyntax system $all)                 #f     #t]
     [$boot       (psyntax system $bootstrap)           #f     #t]
     [ne          (psyntax null-environment-5)          #f     #f]
@@ -263,16 +292,19 @@
 (define identifier->library-map
   '(
     [import                                      i]
+    [export                                      i]
     [foreign-call                                i]
     [type-descriptor                             i]
     [parameterize                                i parameters]
     [define-struct                               i]
-    [include                                     i]
-    [include-into                                i]
+    [stale-when                                  i]
     [time                                        i]
     [trace-lambda                                i]
+    [trace-let                                   i]
     [trace-define                                i]
     [trace-define-syntax                         i]
+    [trace-let-syntax                            i]
+    [trace-letrec-syntax                         i]
     [make-list                                   i]
     [last-pair                                   i]
     [bwp-object?                                 i]
@@ -306,6 +338,8 @@
     [sub1                                        i]
     [bignum?                                     i]
     [ratnum?                                     i]
+    [compnum?                                    i]
+    [cflonum?                                    i]
     [flonum-parts                                i]
     [flonum-bytes                                i]
     [quotient+remainder                          i]
@@ -321,21 +355,6 @@
     [top-level-value                             i symbols]
     [reset-symbol-proc!                          i symbols]
     [make-guardian                               i]
-    [make-input-port                             i]
-    [make-output-port                            i]
-    [port-output-index                           i]
-    [port-output-size                            i]
-    [port-output-buffer                          i]
-    [set-port-output-index!                      i]
-    [set-port-output-size!                       i]
-    [port-input-buffer                           i]
-    [port-input-index                            i]
-    [port-input-size                             i]
-    [set-port-input-index!                       i]
-    [set-port-input-size!                        i]
-    [port-name                                   i]
-    [input-port-name                             i]
-    [output-port-name                            i]
     [port-mode                                   i]
     [set-port-mode!                              i]
     [with-input-from-string                      i]
@@ -349,7 +368,7 @@
     [console-error-port                          i]
     [console-output-port                         i]
     [reset-input-port!                           i]
-    [write-byte                                  i]
+    [reset-output-port!                          i]
     [read-token                                  i]
     [printf                                      i]
     [fprintf                                     i]
@@ -358,16 +377,25 @@
     [print-gensym                                i symbols]
     [print-graph                                 i]
     [print-unicode                               i]
+    [unicode-printable-char?                     i]
     [gensym-count                                i symbols]
     [gensym-prefix                               i symbols]
     [make-parameter                              i parameters]
     [call/cf                                     i]
     [print-error                                 i]
+    [strerror                                    i]
     [interrupt-handler                           i]
+    [engine-handler                              i]
     [assembler-output                            i]
+    [optimizer-output                            i]
     [new-cafe                                    i]
+    [waiter-prompt-string                        i]
     [expand                                      i]
+    [core-expand                                 i]
+    [expand/optimize                             i]
+    [expand/scc-letrec                           i]
     [environment?                                i]
+    [environment-symbols                         i]
     [time-it                                     i]
     [verbose-timer                               i]
     [current-time                                i]
@@ -377,7 +405,6 @@
     [time-nanosecond                             i]
     [command-line-arguments                      i]
     [set-rtd-printer!                            i]
-    [make-record-type                            i]
     [struct?                                     i]
     [make-struct-type                            i]
     [struct-type-name                            i]
@@ -386,6 +413,7 @@
     [struct-field-accessor                       i]
     [struct-length                               i]
     [struct-ref                                  i]
+    [struct-set!                                 i]
     [struct-printer                              i]
     [struct-name                                 i]
     [struct-type-descriptor                      i]
@@ -394,8 +422,16 @@
     [pointer-value                               i]
     [system                                      i]
     [process                                     i]
+    [process*                                    i]
+    [process-nonblocking                         i]
     [waitpid                                     i]
+    [wstatus-pid                                 i]
+    [wstatus-exit-status                         i]
+    [wstatus-received-signal                     i]
+    [kill                                        i]
+    [apropos                                     i]
     [installed-libraries                         i]
+    [uninstall-library                           i]
     [library-path                                i]
     [library-extensions                          i]
     [current-primitive-locations                 $boot]
@@ -460,6 +496,12 @@
     [$make-ratnum                                $rat]
     [$ratnum-n                                   $rat]
     [$ratnum-d                                   $rat]
+    [$make-compnum                               $comp]
+    [$compnum-real                               $comp]
+    [$compnum-imag                               $comp]
+    [$make-cflonum                               $comp]
+    [$cflonum-real                               $comp]
+    [$cflonum-imag                               $comp]
     [$make-vector                                $vectors]
     [$vector-length                              $vectors]
     [$vector-ref                                 $vectors]
@@ -476,6 +518,8 @@
     [$fxsra                                      $fx]
     [$fxquotient                                 $fx]
     [$fxmodulo                                   $fx]
+    [$int-quotient                               $fx]
+    [$int-remainder                              $fx]
     [$fxlogxor                                   $fx]
     [$fxlogor                                    $fx]
     [$fxlognot                                   $fx]
@@ -494,6 +538,8 @@
     [$set-symbol-string!                         $symbols]
     [$set-symbol-unique-string!                  $symbols]
     [$set-symbol-plist!                          $symbols]
+    [$unintern-gensym                            $symbols]
+    [$symbol-table-size                          $symbols]
     [$init-symbol-value!                         ]
     [$unbound-object?                            $symbols]
     ;;;
@@ -516,6 +562,8 @@
     [$code-set!                                  $codes]
     [$set-code-annotation!                       $codes]
     [procedure-annotation                        i]
+    [$make-annotated-procedure                   $codes]
+    [$annotated-procedure-annotation             $codes]
     [$make-tcbucket                              $tcbuckets]
     [$tcbucket-key                               $tcbuckets]
     [$tcbucket-val                               $tcbuckets]
@@ -535,8 +583,15 @@
     [$make-values-procedure                      $stack]
     [$interrupted?                               $interrupts]
     [$unset-interrupted!                         $interrupts]
-    [interrupted-condition?                      interrupts]
-    [make-interrupted-condition                  interrupts]
+    [$swap-engine-counter!                       $interrupts]
+    [interrupted-condition?                      i]
+    [make-interrupted-condition                  i]
+
+    [source-position-condition?                  i]
+    [make-source-position-condition              i]
+    [source-position-file-name                   i]
+    [source-position-character                   i]
+
     [$apply-nonprocedure-error-handler           ]
     [$incorrect-args-error-handler               ]
     [$multiple-values-error                      ]
@@ -557,11 +612,23 @@
     [do-vararg-overflow                          ]
     [collect                                     i]
     [collect-key                                 i]
+    [post-gc-hooks                               i]
     [do-stack-overflow                           ]
     [make-promise                                ]
     [make-traced-procedure                       i]
+    [make-traced-macro                           i]
     [error@fx+                                   ]
+    [error@fxarithmetic-shift-left               ]
+    [error@fxarithmetic-shift-right              ]
+    [error@fx*                                   ]
+    [error@fx-                                   ]
+    [error@add1                                  ]
+    [error@sub1                                  ]
+    [error@fxadd1                                ]
+    [error@fxsub1                                ]
     [fasl-write                                  i]
+    [fasl-read                                   i]
+    [fasl-directory                              i]
     [lambda                                      i r ba se ne]
     [and                                         i r ba se ne]
     [begin                                       i r ba se ne]
@@ -569,6 +636,7 @@
     [cond                                        i r ba se ne]
     [define                                      i r ba se ne]
     [define-syntax                               i r ba se ne]
+    [define-fluid-syntax                         i]
     [identifier-syntax                           i r ba]
     [if                                          i r ba se ne]
     [let                                         i r ba se ne]
@@ -576,6 +644,7 @@
     [let*-values                                 i r ba]
     [let-syntax                                  i r ba se ne]
     [let-values                                  i r ba]
+    [fluid-let-syntax                            i]
     [letrec                                      i r ba se ne]
     [letrec*                                     i r ba]
     [letrec-syntax                               i r ba se ne]
@@ -596,14 +665,21 @@
     [*                                           i r ba se]
     [/                                           i r ba se]
     [abs                                         i r ba se]
+    [asin                                        i r ba se]
     [acos                                        i r ba se]
-    [angle                                       r ba se]
+    [atan                                        i r ba se]
+    [sinh                                        i]
+    [cosh                                        i]
+    [tanh                                        i]
+    [asinh                                       i]
+    [acosh                                       i]
+    [atanh                                       i]
+    [angle                                       i r ba se]
     [append                                      i r ba se]
     [apply                                       i r ba se]
-    [asin                                        i r ba se]
     [assert                                      i r ba]
+    [assertion-error                             ]
     [assertion-violation                         i r ba]
-    [atan                                        i r ba se]
     [boolean=?                                   i r ba]
     [boolean?                                    i r ba se]
     [car                                         i r ba se]
@@ -662,6 +738,7 @@
     [equal?                                      i r ba se]
     [eqv?                                        i r ba se]
     [error                                       i r ba]
+    [warning                                     i]
     [die                                         i]
     [even?                                       i r ba se]
     [exact                                       i r ba]
@@ -690,8 +767,9 @@
     [list?                                       i r ba se]
     [log                                         i r ba se]
     [magnitude                                   i r ba se]
-    [make-polar                                  r ba se]
-    [make-rectangular                            r ba se]
+    [make-polar                                  i r ba se]
+    [make-rectangular                            i r ba se]
+    [$make-rectangular                           $comp]
     [make-string                                 i r ba se]
     [make-vector                                 i r ba se]
     [map                                         i r ba se]
@@ -759,18 +837,18 @@
     [bitwise-arithmetic-shift-right              i r bw]
     [bitwise-not                                 i r bw]
     [bitwise-and                                 i r bw]
-    [bitwise-ior                                 r bw]
-    [bitwise-xor                                 r bw]
+    [bitwise-ior                                 i r bw]
+    [bitwise-xor                                 i r bw]
     [bitwise-bit-count                           i r bw]
     [bitwise-bit-field                           i r bw]
     [bitwise-bit-set?                            i r bw]
     [bitwise-copy-bit                            i r bw]
-    [bitwise-copy-bit-field                      r bw]
+    [bitwise-copy-bit-field                      i r bw]
     [bitwise-first-bit-set                       i r bw]
-    [bitwise-if                                  r bw]
+    [bitwise-if                                  i r bw]
     [bitwise-length                              i r bw]
-    [bitwise-reverse-bit-field                   r bw]
-    [bitwise-rotate-bit-field                    r bw]
+    [bitwise-reverse-bit-field                   i r bw]
+    [bitwise-rotate-bit-field                    i r bw]
     [fixnum?                                     i r fx]
     [fixnum-width                                i r fx]
     [least-fixnum                                i r fx]
@@ -812,8 +890,8 @@
     [fxnot                                       i r fx]
     [fxodd?                                      i r fx]
     [fxpositive?                                 i r fx]
-    [fxreverse-bit-field                         r fx]
-    [fxrotate-bit-field                          r fx]
+    [fxreverse-bit-field                         i r fx]
+    [fxrotate-bit-field                          i r fx]
     [fxxor                                       i r fx]
     [fxzero?                                     i r fx]
     [fixnum->flonum                              i r fl]
@@ -970,7 +1048,6 @@
     [serious-condition?                          i r co]
     [simple-conditions                           i r co]
     [&syntax                                     i r co]
-    [syntax-violation                            i r co sc]
     [syntax-violation-form                       i r co]
     [syntax-violation-subform                    i r co]
     [syntax-violation?                           i r co]
@@ -1000,6 +1077,7 @@
     [enum-set-universe                           i r en]
     [enum-set=?                                  i r en]
     [make-enumeration                            i r en]
+    [enum-set?                                   i]
     [environment                                 i ev]
     [eval                                        i ev se]
     [raise                                       i r ex]
@@ -1009,7 +1087,7 @@
     [binary-port?                                i r ip]
     [buffer-mode                                 i r ip]
     [buffer-mode?                                i r ip]
-    [bytevector->string                          r ip]
+    [bytevector->string                          i r ip]
     [call-with-bytevector-output-port            i r ip]
     [call-with-port                              i r ip]
     [call-with-string-output-port                i r ip]
@@ -1048,6 +1126,8 @@
     [null-environment                            i r5 se]
     [quotient                                    i r5 se]
     [scheme-report-environment                   i r5 se]
+    [interaction-environment                     i]
+    [new-interaction-environment                 i]
     [close-port                                  i r ip]
     [eol-style                                   i r ip]
     [error-handling-mode                         i r ip]
@@ -1060,6 +1140,7 @@
     [get-char                                    i r ip]
     [get-datum                                   i r ip]
     [get-line                                    i r ip]
+    [read-line                                   i]
     [get-string-all                              i r ip]
     [get-string-n                                i r ip]
     [get-string-n!                               i r ip]
@@ -1099,8 +1180,8 @@
     [make-custom-binary-output-port              i r ip]
     [make-custom-textual-input-port              i r ip]
     [make-custom-textual-output-port             i r ip]
-    [make-custom-binary-input/output-port        r ip]
-    [make-custom-textual-input/output-port       r ip]
+    [make-custom-binary-input/output-port        i r ip]
+    [make-custom-textual-input/output-port       i r ip]
     [make-i/o-decoding-error                     i r ip]
     [make-i/o-encoding-error                     i r ip]
     [make-i/o-error                              i r ip is fi]
@@ -1121,15 +1202,17 @@
     [open-bytevector-input-port                  i r ip]
     [open-bytevector-output-port                 i r ip]
     [open-file-input-port                        i r ip]
-    [open-file-input/output-port                 r ip]
+    [open-file-input/output-port                 i r ip]
     [open-file-output-port                       i r ip]
     [open-string-input-port                      i r ip]
     [open-string-output-port                     i r ip]
-    [output-port-buffer-mode                     r ip]
+    [output-port-buffer-mode                     i r ip]
     [port-eof?                                   i r ip]
-    [port-has-port-position?                     r ip]
-    [port-has-set-port-position!?                r ip]
-    [port-position                               r ip]
+    [port-has-port-position?                     i r ip]
+    [port-has-set-port-position!?                i r ip]
+    [port-position                               i r ip]
+    [input-port-column-number                    i]
+    [input-port-row-number                       i]
     [port-transcoder                             i r ip]
     [port?                                       i r ip]
     [put-bytevector                              i r ip]
@@ -1137,11 +1220,11 @@
     [put-datum                                   i r ip]
     [put-string                                  i r ip]
     [put-u8                                      i r ip]
-    [set-port-position!                          r ip]
+    [set-port-position!                          i r ip]
     [standard-error-port                         i r ip]
     [standard-input-port                         i r ip]
     [standard-output-port                        i r ip]
-    [string->bytevector                          r ip]
+    [string->bytevector                          i r ip]
     [textual-port?                               i r ip]
     [transcoded-port                             i r ip]
     [transcoder-codec                            i r ip]
@@ -1154,7 +1237,7 @@
     [current-input-port                          i r ip is se]
     [current-output-port                         i r ip is se]
     [current-error-port                          i r ip is]
-    [eof-object                                  i r ip is se]
+    [eof-object                                  i r ip is]
     [eof-object?                                 i r ip is se]
     [close-input-port                            i r is se]
     [close-output-port                           i r is se]
@@ -1167,6 +1250,7 @@
     [read-char                                   i r is se]
     [with-input-from-file                        i r is se]
     [with-output-to-file                         i r is se]
+    [with-output-to-port                         i]
     [write                                       i r is se]
     [write-char                                  i r is se]
     [call-with-input-file                        i r is se]
@@ -1184,11 +1268,11 @@
     [hashtable-update!                           i r ht]
     [hashtable?                                  i r ht]
     [make-eq-hashtable                           i r ht]
-    [make-eqv-hashtable                          r ht]
-    [hashtable-hash-function                     r ht]
-    [make-hashtable                              r ht]
-    [hashtable-equivalence-function              r ht]
-    [equal-hash                                  r ht]
+    [make-eqv-hashtable                          i r ht]
+    [hashtable-hash-function                     i r ht]
+    [make-hashtable                              i r ht]
+    [hashtable-equivalence-function              i r ht]
+    [equal-hash                                  i r ht]
     [string-hash                                 i r ht]
     [string-ci-hash                              i r ht]
     [symbol-hash                                 i r ht]
@@ -1197,6 +1281,31 @@
     [vector-sort!                                i r sr]
     [file-exists?                                i r fi]
     [delete-file                                 i r fi]
+    [rename-file                                 i]
+    [file-regular?                               i]
+    [file-directory?                             i]
+    [file-symbolic-link?                         i]
+    [file-readable?                              i]
+    [file-writable?                              i]
+    [file-executable?                            i]
+    [current-directory                           i]
+    [directory-list                              i]
+    [make-directory                              i]
+    [make-directory*                             i]
+    [delete-directory                            i]
+    [directory-stream?                           i]
+    [open-directory-stream                       i]
+    [read-directory-stream                       i]
+    [close-directory-stream                      i]
+    [change-mode                                 i]
+    [make-symbolic-link                          i]
+    [make-hard-link                              i]
+    [file-ctime                                  i]
+    [file-mtime                                  i]
+    [file-size                                   i]
+    [file-real-path                              i]
+    [split-file-name                             i]
+    [fork                                        i]
     [define-record-type                          i r rs]
     [fields                                      i r rs]
     [immutable                                   i r rs]
@@ -1226,6 +1335,7 @@
     [record-mutator                              i r rp]
     [record-predicate                            i r rp]
     [record-type-descriptor?                     i r rp]
+    [syntax-violation                            i r sc]
     [bound-identifier=?                          i r sc]
     [datum->syntax                               i r sc]
     [syntax                                      i r sc]
@@ -1239,6 +1349,10 @@
     [generate-temporaries                        i r sc]
     [identifier?                                 i r sc]
     [make-variable-transformer                   i r sc]
+    [variable-transformer?                       i]
+    [variable-transformer-procedure              i]
+    [make-compile-time-value                     i]
+    [syntax-transpose                            i]
     [char-alphabetic?                            i r uc se]
     [char-ci<=?                                  i r uc se]
     [char-ci<?                                   i r uc se]
@@ -1260,24 +1374,31 @@
     [string-ci=?                                 i r uc se]
     [string-ci>=?                                i r uc se]
     [string-ci>?                                 i r uc se]
-    [string-downcase                             r uc]
+    [string-downcase                             i r uc]
     [string-foldcase                             i r uc]
-    [string-normalize-nfc                        r uc]
-    [string-normalize-nfd                        r uc]
-    [string-normalize-nfkc                       r uc]
-    [string-normalize-nfkd                       r uc]
-    [string-titlecase                            r uc]
-    [string-upcase                               r uc]
+    [string-normalize-nfc                        i r uc]
+    [string-normalize-nfd                        i r uc]
+    [string-normalize-nfkc                       i r uc]
+    [string-normalize-nfkd                       i r uc]
+    [string-titlecase                            i r uc]
+    [string-upcase                               i r uc]
     [getenv                                      i]
+    [setenv                                      i]
+    [unsetenv                                    i]
+    [environ                                     i]
+    [nanosleep                                   i]
     [char-ready?                                 ]
-    [interaction-environment                     ]
     [load                                        i]
+    [load-r6rs-script                            i]
     [void                                        i $boot]
     [gensym                                      i symbols $boot]
     [symbol-value                                i symbols $boot]
+    [system-value                                i]
     [set-symbol-value!                           i symbols $boot]
     [eval-core                                   $boot]
+    [current-core-eval                           i] ;;; temp
     [pretty-print                                i $boot]
+    [pretty-format                               i]
     [pretty-width                                i]
     [module                                      i cm]
     [library                                     i]
@@ -1285,7 +1406,7 @@
     [syntax-error                                i]
     [$transcoder->data                           $transc]
     [$data->transcoder                           $transc]
-    [file-options-spec                           i]
+    [make-file-options                           i]
     ;;;
     [port-id               i]
     [read-annotated        i]
@@ -1312,9 +1433,6 @@
     [$set-port-size!      $io]
     [$port-attrs          $io]
     [$set-port-attrs!     $io]
-    [$port-position       $io]
-    [$set-port-position!  $io]
-    [input-port-byte-position   i]
     ;;;
     [&condition-rtd]
     [&condition-rcd]
@@ -1356,8 +1474,8 @@
     [&i/o-filename-rcd]
     [&i/o-file-protection-rtd]
     [&i/o-file-protection-rcd]
-    [&i/o-fie-is-read-only-rtd]
-    [&i/o-fie-is-read-only-rcd]
+    [&i/o-file-is-read-only-rtd]
+    [&i/o-file-is-read-only-rcd]
     [&i/o-file-already-exists-rtd]
     [&i/o-file-already-exists-rcd]
     [&i/o-file-does-not-exist-rtd]
@@ -1374,15 +1492,65 @@
     [&no-nans-rcd]
     [&interrupted-rtd]
     [&interrupted-rcd]
-    [&i/o-would-block-rtd]
-    [&i/o-would-block-rcd]
+    [&source-rtd]
+    [&source-rcd]
     [tcp-connect                      i]
+    [udp-connect                      i]
     [tcp-connect-nonblocking          i]
-    [&i/o-would-block                 i]
-    [make-i/o-would-block-condition   i]
-    [i/o-would-block-condition?       i]
-    [i/o-would-block-port             i]
+    [udp-connect-nonblocking          i]
+    [tcp-server-socket                i]
+    [tcp-server-socket-nonblocking    i]
+    [accept-connection                i]
+    [accept-connection-nonblocking    i]
+    [close-tcp-server-socket          i]
+    [register-callback                i]
+    [input-socket-buffer-size         i]
+    [output-socket-buffer-size        i]
     [ellipsis-map ]
+    [optimize-cp i]
+    [optimize-level i]
+    [cp0-size-limit i]
+    [cp0-effort-limit i]
+    [tag-analysis-output i]
+    [perform-tag-analysis i]
+    [current-letrec-pass i]
+    [pointer?                          $for]
+    [pointer->integer                  $for]
+    [integer->pointer                  $for]
+    [dlopen                            $for]
+    [dlerror                           $for]
+    [dlclose                           $for]
+    [dlsym                             $for]
+    [malloc                            $for]
+    [free                              $for]
+    [memcpy                            $for]
+    [errno                             $for]
+    [pointer-ref-c-signed-char         $for]
+    [pointer-ref-c-signed-short        $for]
+    [pointer-ref-c-signed-int          $for]
+    [pointer-ref-c-signed-long         $for]
+    [pointer-ref-c-signed-long-long    $for]
+    [pointer-ref-c-unsigned-char       $for]
+    [pointer-ref-c-unsigned-short      $for]
+    [pointer-ref-c-unsigned-int        $for]
+    [pointer-ref-c-unsigned-long       $for]
+    [pointer-ref-c-unsigned-long-long  $for]
+    [pointer-ref-c-float               $for]
+    [pointer-ref-c-double              $for]
+    [pointer-ref-c-pointer             $for]
+    [pointer-set-c-char!               $for]
+    [pointer-set-c-short!              $for]
+    [pointer-set-c-int!                $for]
+    [pointer-set-c-long!               $for]
+    [pointer-set-c-long-long!          $for]
+    [pointer-set-c-pointer!            $for]
+    [pointer-set-c-float!              $for]
+    [pointer-set-c-double!             $for]
+    [make-c-callout                    $for]
+    [make-c-callback                   $for]
+    [host-info                         i]
+    [debug-call                        ]
+
   ))
 
 (define (macro-identifier? x) 
@@ -1426,6 +1594,15 @@
         [(x) (set! set (cons x set))]))))
 
 (import (ikarus makefile collections))
+
+(define verbose-output? #f)
+
+(define debugf
+  (if verbose-output?
+      printf
+      (case-lambda
+        [(str) (printf str)]
+        [(str . args) (printf ".")])))
 
 (define (assq1 x ls)
   (let f ([x x] [ls ls] [p #f])
@@ -1480,6 +1657,7 @@
             [else 
              ;;; core primitive with no backing definition, assumed to
              ;;; be defined in other strata of the system
+             ;(printf "undefined primitive ~s\n" x)
              (let ([label (gensym)])
                (export-subst (cons x label))
                (export-env (cons label (cons 'core-prim x))))])))
@@ -1524,24 +1702,27 @@
                             '()))])
           `(install-library 
              ',id ',name ',version ',import-libs ',visit-libs ',invoke-libs
-             ',subst ',env void void ',visible?)))))
+             ',subst ',env void void '#f '#f '#f '() ',visible? '#f)))))
   (let ([code `(library (ikarus primlocs)
                   (export) ;;; must be empty
                   (import 
+                    (only (ikarus.symbols) system-value-gensym)
                     (only (psyntax library-manager)
                           install-library)
-                    (only (ikarus compiler)
+                    (only (ikarus.compiler)
                           current-primitive-locations)
                     (ikarus))
-                  (current-primitive-locations 
-                    (lambda (x) 
-                      (cond
-                        [(assq x ',primlocs) => cdr]
-                        [else #f])))
+                  (let ([g system-value-gensym])
+                    (for-each
+                      (lambda (x) (putprop (car x) g (cdr x)))
+                      ',primlocs)
+                    (let ([proc 
+                           (lambda (x) (getprop x g))])
+                      (current-primitive-locations proc)))
                   ,@(map build-library library-legend))])
-    (let-values ([(code empty-subst empty-env)
+    (let-values ([(name code empty-subst empty-env)
                   (boot-library-expand code)])
-       code)))
+       (values name code))))
 
 ;;; the first code to run on the system is one that initializes
 ;;; the value and proc fields of the location of $init-symbol-value!
@@ -1556,6 +1737,7 @@
   (define val (gensym))
   (define args (gensym))
   (values 
+    (list '(ikarus.init))
     (list
       `((case-lambda 
           [(,proc) (,proc ',loc ,proc)])
@@ -1575,6 +1757,8 @@
     `([$init-symbol-value! . ,label])
     `([,label . (global . ,loc)])))
 
+(define src-dir (or (getenv "IKARUS_SRC_DIR") "."))
+
 (define (expand-all files)
   ;;; remove all re-exported identifiers (those with labels in
   ;;; subst but not binding in env).
@@ -1583,31 +1767,35 @@
       ((null? subst) '()) 
       ((not (assq (cdar subst) env)) (prune-subst (cdr subst) env)) 
       (else (cons (car subst) (prune-subst (cdr subst) env)))))
-  (let-values (((code* subst env) (make-init-code)))
+  (let-values (((name* code* subst env) (make-init-code)))
+    (debugf "Expanding ")
     (for-each
       (lambda (file)
-        (printf "expanding ~s\n" file)
-        (load file
+        (debugf " ~s" file)
+        (load (string-append src-dir "/" file)
           (lambda (x) 
-            (let-values ([(code export-subst export-env)
+            (let-values ([(name code export-subst export-env)
                           (boot-library-expand x)])
+               (set! name* (cons name name*))
                (set! code* (cons code code*))
                (set! subst (append export-subst subst))
                (set! env (append export-env env))))))
       files)
+    (debugf "\n")
     (let-values ([(export-subst export-env export-locs)
                   (make-system-data (prune-subst subst env) env)])
-      (let ([code (build-system-library export-subst export-env export-locs)])
+      (let-values ([(name code)
+                    (build-system-library export-subst export-env export-locs)])
         (values 
+          (reverse (cons* (car name*) name (cdr name*)))
           (reverse (cons* (car code*) code (cdr code*)))
           export-locs)))))
-
 
 (verify-map)
 
 (time-it "the entire bootstrap process"
   (lambda ()
-    (let-values ([(core* locs)
+    (let-values ([(name* core* locs)
                   (time-it "macro expansion"
                     (lambda () 
                       (parameterize ([current-library-collection
@@ -1619,17 +1807,21 @@
               [(assq x locs) => cdr]
               [else 
                (error 'bootstrap "no location for primitive" x)])))
-        
         (let ([p (open-file-output-port "ikarus.boot" 
                     (file-options no-fail))])
           (time-it "code generation and serialization"
             (lambda ()
+              (debugf "Compiling ")
               (for-each 
-                (lambda (x) 
-                  (compile-core-expr-to-port x p))
-                core*)))
+                (lambda (name core) 
+                  (debugf " ~s" name)
+                  (compile-core-expr-to-port core p))
+                name*
+                core*) 
+              (debugf "\n")))
           (close-output-port p)))))
 
+;(print-missing-prims)
 
 (printf "Happy Happy Joy Joy\n")
 

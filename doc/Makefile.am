@@ -14,7 +14,12 @@ ikarus-scheme-users-guide.pdf: ikarus-scheme-users-guide.tex ikarus-scheme-users
 	  $(TEX) ikarus-scheme-users-guide ; \
 	fi 
 
-all: ikarus-scheme-users-guide.pdf
+all:
+
+docs: ikarus-scheme-users-guide.pdf
+
+fast:
+	$(TEX) ikarus-scheme-users-guide
 
 clean: 
 	rm -f *.aux *.log *.toc *.out *.idx *.ind *.ilg *.blg *.bbl

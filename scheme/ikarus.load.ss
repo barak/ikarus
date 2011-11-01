@@ -15,15 +15,82 @@
 
 
 (library (ikarus load)
-  (export load load-r6rs-top-level)
+  (export load load-r6rs-script fasl-directory)
   (import 
-    (except (ikarus) load)
-    (only (psyntax expander) eval-top-level eval-r6rs-top-level)
-    (only (ikarus reader) read-initial))
+    (except (ikarus) fasl-directory load load-r6rs-script)
+    (only (ikarus.compiler) compile-core-expr)
+    (only (psyntax library-manager)
+      serialize-all current-precompiled-library-loader)
+    (only (psyntax expander) compile-r6rs-top-level)
+    (only (ikarus.reader.annotated) read-script-source-file))
+
+  (define-struct serialized-library (contents))
+
+  (define fasl-extension 
+    (cond
+      [(<= (fixnum-width) 32) ".ikarus-32bit-fasl"]
+      [else                   ".ikarus-64bit-fasl"]))
+
+  (define fasl-directory 
+    (make-parameter 
+      (cond
+        [(getenv "IKARUS_FASL_DIRECTORY")]
+        [(getenv "HOME") =>
+         (lambda (s)
+           (string-append s "/.ikarus/precompiled"))]
+        [else ""])
+      (lambda (s)
+        (if (string? s)
+            s
+            (die 'fasl-directory "not a string" s)))))
+      
+  (define (fasl-path filename)
+    (let ([d (fasl-directory)])
+      (and (not (string=? d ""))
+        (string-append d (file-real-path filename) fasl-extension))))
+
+  (define (load-serialized-library filename sk)
+    (let ([ikfasl (fasl-path filename)])
+      (cond
+        [(or (not ikfasl) (not (file-exists? ikfasl))) #f]
+        [(< (file-mtime ikfasl) (file-mtime filename))
+         (fprintf (current-error-port)
+            "WARNING: not using fasl file ~s because it is older \
+             than the source file ~s\n" 
+           ikfasl
+           filename)
+         #f]
+        [else
+         (let ([x 
+                (let ([p (open-file-input-port ikfasl)])
+                  (let ([x (fasl-read p)])
+                    (close-input-port p)
+                    x))])
+           (if (serialized-library? x)
+               (apply sk (serialized-library-contents x))
+               (begin
+                 (fprintf (current-error-port)
+                    "WARNING: not using fasl file ~s because it was \
+                     compiled with a different instance of ikarus.\n" 
+                    ikfasl)
+                 #f)))])))
+
+  (define (do-serialize-library filename contents)
+    (let ([ikfasl (fasl-path filename)])
+      (cond
+        [(not ikfasl) (void)]
+        [else
+         (fprintf (current-error-port) "Serializing ~s ...\n" ikfasl)
+         (let-values ([(dir name) (split-file-name ikfasl)])
+           (make-directory* dir))
+         (let ([p (open-file-output-port ikfasl (file-options no-fail))])
+           (fasl-write (make-serialized-library contents) p)
+           (close-output-port p))])))
 
   (define load-handler
     (lambda (x)
-      (eval-top-level x)))
+      (eval x (interaction-environment))))
+
   (define read-and-eval
     (lambda (p eval-proc)
       (let ([x (read p)])
@@ -38,27 +105,28 @@
          (die 'load "not a string" x))
        (unless (procedure? eval-proc)
          (die 'load "not a procedure" eval-proc))
-       (let ([p (open-input-file x)])
-         (let ([x (read-initial p)])
-           (unless (eof-object? x)
-             (eval-proc x)
-             (read-and-eval p eval-proc)))
-         (close-input-port p))]))
-  (define load-r6rs-top-level
-    (lambda (x)
-      (define (read-file)
-        (let ([p (open-input-file x)])
-          (let ([x (read-script-annotated p)])
-            (if (eof-object? x)
-                (begin (close-input-port p) '())
-                (cons x 
-                  (let f ()
-                    (let ([x (read-annotated p)])
-                      (cond
-                        [(eof-object? x) 
-                         (close-input-port p)
-                         '()]
-                        [else (cons x (f))]))))))))
-      (let ([prog (read-file)])
-        (eval-r6rs-top-level prog))))
+       (let ([ls (read-script-source-file x)])
+         (let f ()
+           (unless (null? ls)
+             (let ([a (car ls)])
+               (set! ls (cdr ls))
+               (eval-proc a))
+             (f))))]))
+
+  (define load-r6rs-script
+    (lambda (filename serialize? run?)
+      (unless (string? filename) 
+        (die 'load-r6rs-script "file name is not a string" filename))
+      (let ([prog (read-script-source-file filename)])
+        (let([thunk (compile-r6rs-top-level prog)])
+          (when serialize?
+            (serialize-all
+              (lambda (file-name contents)
+                (do-serialize-library file-name contents))
+              (lambda (core-expr) 
+                (compile-core-expr core-expr))))
+          (when run? (thunk))))))
+
+  (current-precompiled-library-loader load-serialized-library)
+  
   )

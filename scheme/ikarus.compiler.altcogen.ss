@@ -65,8 +65,17 @@
       [else (error who "invalid closure" x)]))
   ;;;
   (define (mkfuncall op arg*)
-    (import primops)
+    (define (primop? x)
+      (import primops)
+      (or (eq? x 'debug-call) (primop? x)))
     (struct-case op
+      [(known x t)
+       (struct-case x
+         [(primref name)
+          (if (primop? name)
+              (make-primcall name arg*)
+              (make-funcall op arg*))]
+         [else (make-funcall op arg*)])]
       [(primref name)
        (cond
          [(primop? name)
@@ -74,6 +83,10 @@
          [else (make-funcall op arg*)])]
       [else (make-funcall op arg*)]))
   ;;;
+  (define (A x)
+    (struct-case x
+      [(known x t) (make-known (Expr x) t)]
+      [else (Expr x)]))
   (define (Expr x)
     (struct-case x
       [(constant) x]
@@ -91,11 +104,9 @@
       [(forcall op arg*)
        (make-forcall op (map Expr arg*))]
       [(funcall rator arg*)
-       (mkfuncall (Expr rator) (map Expr arg*))]
+       (mkfuncall (A rator) (map A arg*))]
       [(jmpcall label rator arg*)
        (make-jmpcall label (Expr rator) (map Expr arg*))]
-      [(mvcall rator k)
-       (make-mvcall (Expr rator) (Clambda k))]
       [else (error who "invalid expr" x)]))
   ;;;
   (define (ClambdaCase x)
@@ -139,9 +150,13 @@
     (define (do-fix lhs* rhs* body)
       (define (handle-closure x)
         (struct-case x
-          [(closure code free*) 
-           (make-closure code (map Var free*))]))
+          [(closure code free* well-known?) 
+           (make-closure code (map Var free*) well-known?)]))
       (make-fix lhs* (map handle-closure rhs*) body))
+    (define (A x)
+      (struct-case x
+        [(known x t) (make-known (Expr x) t)]
+        [else (Expr x)]))
     (define (Expr x)
       (struct-case x
         [(constant) x]
@@ -159,15 +174,13 @@
          (let ([t (unique-var 'tmp)])
            (Expr (make-fix (list t) (list x) t)))]
         [(primcall op arg*)
-         (make-primcall op (map Expr arg*))]
+         (make-primcall op (map A arg*))]
         [(forcall op arg*)
          (make-forcall op (map Expr arg*))]
         [(funcall rator arg*)
-         (make-funcall (Expr rator) (map Expr arg*))]
+         (make-funcall (A rator) (map A arg*))]
         [(jmpcall label rator arg*)
          (make-jmpcall label (Expr rator) (map Expr arg*))]
-        [(mvcall rator k)
-         (make-mvcall (Expr rator) (Clambda k))]
         [else (error who "invalid expr" x)]))
     Expr)
   ;;;
@@ -187,7 +200,7 @@
     (struct-case x
       [(clambda label case* cp free* name)
        (make-clambda label (map (ClambdaCase cp free*) case*) 
-                     cp free* name)]
+                     #f free* name)]
       [else (error who "invalid clambda" x)]))
   ;;;
   (define (Program x)
@@ -208,20 +221,28 @@
 
 (define (insert-engine-checks x)
   (define who 'insert-engine-checks)
+  (define (known-primref? x)
+    (struct-case x
+      [(known x t) (known-primref? x)]
+      [(primref)   #t]
+      [else #f]))
+  (define (A x)
+    (struct-case x
+      [(known x t) (Expr x)]
+      [else (Expr x)]))
   (define (Expr x) 
     (struct-case x
       [(constant)                 #f]
       [(var)                      #f]
       [(primref)                  #f]
       [(jmpcall label rator arg*) #t]
-      [(mvcall rator k)           #t] 
       [(funcall rator arg*)
-       (if (primref? rator) (ormap Expr arg*) #t)]
+       (if (known-primref? rator) (ormap A arg*) #t)]
       [(bind lhs* rhs* body)      (or (ormap Expr rhs*) (Expr body))]
       [(fix lhs* rhs* body)       (Expr body)]
       [(conditional e0 e1 e2)     (or (Expr e0) (Expr e1) (Expr e2))]
       [(seq e0 e1)                (or (Expr e0) (Expr e1))]
-      [(primcall op arg*)         (ormap Expr arg*)]
+      [(primcall op arg*)         (ormap A arg*)]
       [(forcall op arg*)          (ormap Expr arg*)]
       [else (error who "invalid expr" x)]))
   (define (Main x)
@@ -245,7 +266,11 @@
 
 (define (insert-stack-overflow-check x)
   (define who 'insert-stack-overflow-check)
-   (define (NonTail x)
+  (define (A x)
+    (struct-case x
+      [(known x t) (NonTail x)]
+      [else (NonTail x)]))
+  (define (NonTail x)
     (struct-case x
       [(constant)                 #f]
       [(var)                      #f]
@@ -253,12 +278,13 @@
       [(funcall rator arg*)       #t]
       [(jmpcall label rator arg*) #t]
       [(mvcall rator k)           #t] 
+      [(primcall op arg*)     (ormap A arg*)] ;PUNT!!! FIXME!
       [(bind lhs* rhs* body)  (or (ormap NonTail rhs*) (NonTail body))]
       [(fix lhs* rhs* body)   (NonTail body)]
       [(conditional e0 e1 e2) (or (NonTail e0) (NonTail e1) (NonTail e2))]
       [(seq e0 e1)            (or (NonTail e0) (NonTail e1))]
-      [(primcall op arg*)     (ormap NonTail arg*)]
       [(forcall op arg*)      (ormap NonTail arg*)]
+      [(known x t) (NonTail x)]
       [else (error who "invalid expr" x)]))
   (define (Tail x) 
     (struct-case x
@@ -275,30 +301,24 @@
       [(jmpcall label rator arg*) (or (NonTail rator) (ormap NonTail arg*))]
       [(mvcall rator k) #t] ; punt
       [else (error who "invalid expr" x)]))
- 
   (define (insert-check x)
     (make-seq (make-primcall '$stack-overflow-check '()) x))
-
   (define (ClambdaCase x)
     (struct-case x
       [(clambda-case info body)
        (make-clambda-case info (Main body))]))
-  ;;;
   (define (Clambda x)
     (struct-case x
       [(clambda label case* cp free* name)
        (make-clambda label (map ClambdaCase case*) cp free* name)]))
-  ;;;
   (define (Main x)
-    (if (Tail x) 
+    (if (Tail x)
         (insert-check x) 
         x))
-  ;;;
   (define (Program x)
     (struct-case x 
       [(codes code* body)
        (make-codes (map Clambda code*) (Main body))]))
-  ;;;
   (Program x))
 
 (include "pass-specify-rep.ss")
@@ -307,7 +327,15 @@
 (define return-value-register '%eax)
 (define cp-register '%edi)
 (define all-registers 
-  '(%eax %edi %ebx %edx %ecx))
+  (case wordsize
+    [(4) '(%eax %edi %ebx %edx %ecx)]
+    [else '(%eax %edi %ebx %edx %ecx %r8 %r9 %r10 %r11 %r14 %r15)]))
+
+(define non-8bit-registers 
+  (case wordsize
+    [(4) '(%edi)]
+    [else '(%edi)]))
+
 (define argc-register '%eax)
 
 ;;; apr = %ebp
@@ -321,10 +349,6 @@
                [%ecx 4] [%esi 5] [%esp 6] [%ebp 7])) 
      => cadr]
     [else (error 'register-index "not a register" x)]))
-
-
-(define non-8bit-registers 
-  '(%edi))
 
 (define (impose-calling-convention/evaluation-order x)
   (define who 'impose-calling-convention/evaluation-order)
@@ -346,6 +370,7 @@
        (do-bind lhs* rhs* (S body k))]
       [(seq e0 e1)
        (make-seq (E e0) (S e1 k))]
+      [(known x) (S x k)]
       [else
        (cond
          [(or (constant? x) (symbol? x)) (k x)]
@@ -360,15 +385,15 @@
             (do-bind (list t) (list x)
               (k t)))]
          [else (error who "invalid S" x)])]))
-  ;(define (Mem x k) 
-  ;  (struct-case x 
-  ;    [(primcall op arg*) 
-  ;     (if (eq? op 'mref)
-  ;         (S* arg*
-  ;            (lambda (arg*)
-  ;               (make-disp (car arg*) (cadr arg*))))
-  ;         (S x k))]
-  ;    [else (S x k)]))
+  (define (Mem x k) 
+    (struct-case x 
+      [(primcall op arg*) 
+       (if (eq? op 'mref)
+           (S* arg*
+              (lambda (arg*)
+                 (k (make-disp (car arg*) (cadr arg*)))))
+           (S x k))]
+      [else (S x k)]))
   ;;;
   (define (do-bind lhs* rhs* body)
     (cond
@@ -439,13 +464,25 @@
   ;;;              (make-constant (- disp-symbol-record-proc symbol-ptag))))
   ;;;          (list size)))))
   (define (alloc-check size)
+    (define (test size)
+      (if (struct-case size 
+             [(constant i) (<= i 4096)]
+             [else #f])
+          (make-primcall '<= 
+             (list 
+               apr
+               (make-primcall 'mref 
+                 (list pcr (make-constant pcb-allocation-redline)))))
+          (make-primcall '>= 
+            (list (make-primcall 'int- 
+                     (list 
+                       (make-primcall 'mref 
+                         (list pcr (make-constant pcb-allocation-redline))) 
+                       apr))
+                  size))))
     (E (make-shortcut
          (make-conditional ;;; PCB ALLOC-REDLINE
-           (make-primcall '<= 
-             (list (make-primcall 'int+ (list apr size)) 
-                   (make-primcall 'mref 
-                     (list pcr 
-                        (make-constant pcb-allocation-redline)))))
+           (test size)
            (make-primcall 'nop '())
            (make-primcall 'interrupt '()))
          (make-funcall 
@@ -486,10 +523,15 @@
           (S* rands
               (lambda (rands)
                 (make-set d (make-disp (car rands) (cadr rands)))))]
+         [(mref32) 
+          (S* rands
+              (lambda (rands)
+                (make-asm-instr 'load32 d 
+                  (make-disp (car rands) (cadr rands)))))]
          [(bref) 
           (S* rands
               (lambda (rands)
-                (make-asm-instr 'move-byte d 
+                (make-asm-instr 'load8 d 
                   (make-disp (car rands) (cadr rands)))))]
          [(logand logxor logor int+ int- int*
                   int-/overflow int+/overflow int*/overflow)
@@ -498,7 +540,7 @@
             (S (cadr rands)
                (lambda (s)
                  (make-asm-instr op d s))))]
-         [(remainder)
+         [(int-quotient)
           (S* rands
               (lambda (rands)
                 (seq* 
@@ -506,7 +548,7 @@
                   (make-asm-instr 'cltd edx eax)
                   (make-asm-instr 'idiv eax (cadr rands))
                   (make-set d eax))))]
-         [(quotient) 
+         [(int-remainder) 
           (S* rands
               (lambda (rands)
                 (seq* 
@@ -514,7 +556,7 @@
                   (make-asm-instr 'cltd edx eax)
                   (make-asm-instr 'idiv edx (cadr rands))
                   (make-set d edx))))]
-         [(sll sra srl)
+         [(sll sra srl sll/overflow)
           (let ([a (car rands)] [b (cadr rands)])
             (cond
               [(constant? b)
@@ -541,6 +583,7 @@
        (make-shortcut 
           (V d body)
           (V d handler))] 
+      [(known x) (V d x)]
       [else 
        (if (symbol? x) 
            (make-set d x)
@@ -571,11 +614,11 @@
        (do-bind lhs* rhs* (E e))]
       [(primcall op rands)
        (case op
-         [(mset bset/c bset/h)
+         [(mset bset mset32)
           (S* rands
               (lambda (s*)
                 (make-asm-instr op
-                  (make-disp (car s*) (cadr s*)) 
+                  (make-disp (car s*) (cadr s*))
                   (caddr s*))))]
          [(fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
                    fl:from-int fl:shuffle bswap!
@@ -613,15 +656,26 @@
             (let ([t (unique-var 'tmp)])
               (P (make-bind (list t) (list a)
                     (make-primcall op (list t b)))))]
-           ;[(constant? a) 
-           ; (Mem b (lambda (b) (make-asm-instr op a b)))]
-           ;[(constant? b)
-           ; (Mem a (lambda (a) (make-asm-instr op a b)))]
            [else
-            (S* rands
-                (lambda (rands)
-                  (let ([a (car rands)] [b (cadr rands)])
-                    (make-asm-instr op a b))))]))]
+            (Mem a
+              (lambda (a)
+                (Mem b 
+                  (lambda (b)
+                    (make-asm-instr op a b)))))]))]
+         ;(cond
+         ;  [(and (constant? a) (constant? b))
+         ;   (let ([t (unique-var 'tmp)])
+         ;     (P (make-bind (list t) (list a)
+         ;           (make-primcall op (list t b)))))]
+         ;  [(constant? a)
+         ;   (Mem b (lambda (b) (make-asm-instr op a b)))]
+         ;  [(constant? b)
+         ;   (Mem a (lambda (a) (make-asm-instr op a b)))]
+         ;  [else
+         ;   (S* rands
+         ;       (lambda (rands)
+         ;         (let ([a (car rands)] [b (cadr rands)])
+         ;           (make-asm-instr op a b))))]))]
         [(shortcut body handler)
          (make-shortcut (P body) (P handler))]
       [else (error who "invalid pred" x)]))
@@ -707,6 +761,7 @@
       [(forcall) (VT x)]
       [(shortcut body handler)
        (make-shortcut (Tail body) (Tail handler))]
+      [(known x) (Tail x)]
       [else (error who "invalid tail" x)]))
   ;;;
   (define (formals-locations args)
@@ -783,7 +838,7 @@
 
 (module ListySet 
   (make-empty-set set-member? set-add set-rem set-difference set-union
-   empty-set?
+   empty-set? singleton
    set->list list->set)
   (define-struct set (v))
   (define (make-empty-set) (make-set '()))
@@ -797,6 +852,8 @@
   (define (set->list s)
     (unless (set? s) (error 'set->list "not a set" s))
     (set-v s))
+  (define (singleton x)
+    (make-set (list x)))
   (define (set-add x s)
     ;(unless (fixnum? x) (error 'set-add "not a fixnum" x))
     (unless (set? s) (error 'set-add "not a set" s))
@@ -834,7 +891,7 @@
       [else (cons (car s1) (union (cdr s1) s2))])))
 
 (module IntegerSet
-  (make-empty-set set-member? set-add set-rem set-difference
+  (make-empty-set set-member? set-add singleton set-rem set-difference
    set-union empty-set? set->list list->set)
   ;;; 
   (begin
@@ -868,6 +925,9 @@
              (f (cdr s) (fxsra i 1) j))]
         [(eq? i 0) (eq? j (fxlogand s j))]
         [else #f])))
+  ;;;
+  (define (singleton n)
+    (set-add n (make-empty-set)))
   ;;;
   (define (set-add n s)
     (unless (fixnum? n) (error 'set-add "not a fixnum" n))
@@ -1280,7 +1340,7 @@
             (union-nfvs ns1 ns2)))]
       [(asm-instr op d s)
        (case op
-         [(move move-byte)
+         [(move load8 load32)
           (cond
             [(reg? d)
              (cond
@@ -1419,7 +1479,9 @@
                       (mark-nfv/frms-conf! d fs)
                       (R s vs rs fs (add-nfv d ns)))])]
                 [else (error who "invalid op d" (unparse x))])))] 
-         [(logand logor logxor sll sra srl int+ int- int* bswap!) 
+         [(nop) (values vs rs fs ns)]
+         [(logand logor logxor sll sra srl int+ int- int* bswap!
+           sll/overflow) 
           (cond
             [(var? d) 
              (cond
@@ -1458,9 +1520,9 @@
          [(cltd) 
           (mark-reg/vars-conf! edx vs)
           (R s vs (rem-reg edx rs) fs ns)]
-         [(mset bset/c bset/h fl:load fl:store fl:add! fl:sub!
-                fl:mul! fl:div! fl:from-int fl:shuffle
-                fl:load-single fl:store-single) 
+         [(mset mset32 bset 
+           fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:from-int
+           fl:shuffle fl:load-single fl:store-single) 
           (R* (list s d) vs rs fs ns)]
          [else (error who "invalid effect op" (unparse x))])]
       [(ntcall target value args mask size)
@@ -1654,18 +1716,19 @@
          (make-conditional (P e0) (E e1) (E e2))]
         [(asm-instr op d s)
          (case op
-           [(move move-byte) 
+           [(move load8 load32) 
             (let ([d (R d)] [s (R s)])
               (cond
                 [(eq? d s) 
                  (make-primcall 'nop '())]
                 [else
                  (make-asm-instr op d s)]))]
-           [(logand logor logxor int+ int- int* mset bset/c bset/h 
+           [(logand logor logxor int+ int- int* mset bset mset32 
               sll sra srl bswap!
               cltd idiv int-/overflow int+/overflow int*/overflow
               fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
-              fl:from-int fl:shuffle fl:load-single fl:store-single)
+              fl:from-int fl:shuffle fl:load-single fl:store-single
+              sll/overflow)
             (make-asm-instr op (R d) (R s))]
            [(nop) (make-primcall 'nop '())]
            [else (error who "invalid op" op)])]
@@ -1854,7 +1917,7 @@
     (define (R x)
       (struct-case x
         [(constant) (make-empty-set)]
-        [(var) (list->set (list x))]
+        [(var) (singleton x)]
         [(disp s0 s1) (set-union (R s0) (R s1))]
         [(fvar) (make-empty-set)]
         [(code-loc) (make-empty-set)]
@@ -1870,11 +1933,11 @@
       (struct-case x
         [(asm-instr op d v)
          (case op
-           [(move)
+           [(move load32)
             (let ([s (set-rem d s)])
               (set-for-each (lambda (y) (add-edge! g d y)) s)
               (set-union (R v) s))]
-           [(move-byte)
+           [(load8)
             (let ([s (set-rem d s)])
               (set-for-each (lambda (y) (add-edge! g d y)) s)
               (when (var? d)
@@ -1888,13 +1951,12 @@
             (let ([s (set-rem d (set-union s (exception-live-set)))])
               (set-for-each (lambda (y) (add-edge! g d y)) s)
               (set-union (set-union (R v) (R d)) s))] 
-           [(logand logxor int+ int- int* logor sll sra srl bswap!)
+           [(logand logxor int+ int- int* logor sll sra srl bswap!
+             sll/overflow)
             (let ([s (set-rem d s)])
               (set-for-each (lambda (y) (add-edge! g d y)) s)
               (set-union (set-union (R v) (R d)) s))]
-           [(bset/c)
-            (set-union (set-union (R v) (R d)) s)]
-           [(bset/h)
+           [(bset)
             (when (var? v)
               (for-each (lambda (r) (add-edge! g v r))
                 non-8bit-registers))
@@ -1912,7 +1974,7 @@
                   s))
               (set-union (set-union (R eax) (R edx))
                      (set-union (R v) s)))]
-           [(mset fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
+           [(mset mset32 fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
                   fl:from-int fl:shuffle fl:store-single
                   fl:load-single)
             (set-union (R v) (set-union (R d) s))]
@@ -2151,8 +2213,37 @@
             (not (<= (- (expt 2 31)) n (- (expt 2 31) 1)))]
            [else #t])]
         [else #f]))
+    (define (small-operand? x)
+      (case wordsize
+        [(4) (not (mem? x))]
+        [(8) 
+         (struct-case x 
+           [(constant n) 
+            (cond
+              [(integer? n) 
+               (<= (- (expt 2 31)) n (- (expt 2 31) 1))]
+              [else #f])]
+           [else (or (register? x) (var? x))])]
+        [else (error 'small-operand? "huh?")]))
     (define (mem? x)
       (or (disp? x) (fvar? x)))
+    (define (fix-address x k)
+      (cond
+        [(disp? x) 
+         (let ([s0 (disp-s0 x)] [s1 (disp-s1 x)])
+           (cond
+             [(not (small-operand? s0))
+              (let ([u (mku)])
+                (make-seq
+                  (E (make-asm-instr 'move u s0))
+                  (fix-address (make-disp u s1) k)))]
+             [(not (small-operand? s1))
+              (let ([u (mku)])
+                (make-seq
+                  (E (make-asm-instr 'move u s1))
+                  (fix-address (make-disp s0 u) k)))]
+             [else (k x)]))]
+        [else (k x)]))
     ;;; unspillable effect
     (define (E x)
       (struct-case x
@@ -2161,8 +2252,19 @@
          (make-conditional (P e0) (E e1) (E e2))]
         [(asm-instr op a b) 
          (case op
-           [(logor logxor logand int+ int- int* move move-byte
-                   int-/overflow int+/overflow int*/overflow)
+           [(load8 load32)
+            (fix-address b
+              (lambda (b)
+                (cond
+                  [(or (register? a) (var? a)) 
+                   (make-asm-instr op a b)]
+                  [else 
+                   (let ([u (mku)])
+                     (make-seq
+                       (make-asm-instr op u b)
+                       (E (make-asm-instr 'move a u))))])))]
+           [(logor logxor logand int+ int- int* move 
+             int-/overflow int+/overflow int*/overflow)
             (cond
               [(and (eq? op 'move) (eq? a b)) 
                (make-primcall 'nop '())]
@@ -2180,7 +2282,7 @@
                      (E (make-asm-instr 'move u a))
                      (E (make-asm-instr op u b)))
                    (E (make-asm-instr 'move a u))))]
-              [(and (mem? a) (mem? b)) 
+              [(and (mem? a) (not (small-operand? b))) 
                (let ([u (mku)])
                  (make-seq
                    (E (make-asm-instr 'move u b))
@@ -2188,26 +2290,31 @@
               [(disp? a) 
                (let ([s0 (disp-s0 a)] [s1 (disp-s1 a)])
                  (cond
-                   [(mem? s0)
+                   [(not (small-operand? s0))
                     (let ([u (mku)])
                       (make-seq
                         (E (make-asm-instr 'move u s0))
                         (E (make-asm-instr op (make-disp u s1) b))))]
-                   [(mem? s1)
+                   [(not (small-operand? s1))
                     (let ([u (mku)])
                       (make-seq
                         (E (make-asm-instr 'move u s1))
                         (E (make-asm-instr op (make-disp s0 u) b))))]
-                   [else x]))]
+                   [(small-operand? b) x]
+                   [else 
+                    (let ([u (mku)])
+                      (make-seq
+                        (E (make-asm-instr 'move u b))
+                        (E (make-asm-instr op a u))))]))]
               [(disp? b) 
                (let ([s0 (disp-s0 b)] [s1 (disp-s1 b)])
                  (cond
-                   [(mem? s0)
+                   [(not (small-operand? s0))
                     (let ([u (mku)])
                       (make-seq
                         (E (make-asm-instr 'move u s0))
                         (E (make-asm-instr op a (make-disp u s1)))))]
-                   [(mem? s1)
+                   [(not (small-operand? s1))
                     (let ([u (mku)])
                       (make-seq
                         (E (make-asm-instr 'move u s1))
@@ -2231,55 +2338,48 @@
             (unless (symbol? a) 
               (error who "invalid arg to idiv"))
             (cond
-              [(disp? b)
-               (error who "invalid arg to idiv" b)]
-              [else x])]
-           [(sll sra srl)
+              [(or (var? b) (symbol? b)) x]
+              [else 
+               (let ([u (mku)])
+                 (make-seq
+                   (E (make-asm-instr 'move u b))
+                   (E (make-asm-instr 'idiv a u))))])]
+           [(sll sra srl sll/overflow)
             (unless (or (constant? b)
                         (eq? b ecx))
               (error who "invalid shift" b))
             x]
-           [(mset bset/c bset/h) 
+           [(mset mset32 bset) 
             (cond
-              [(mem? b) 
+              [(not (small-operand? b))
                (let ([u (mku)])
                  (make-seq
                    (E (make-asm-instr 'move u b))
                    (E (make-asm-instr op a u))))]
               [else
-               (let ([s1 (disp-s0 a)] [s2 (disp-s1 a)])
-                 (cond
-                   [(and (mem? s1) (mem? s2))
-                    (let ([u (mku)])
-                      (make-seq
-                        (make-seq
-                          (E (make-asm-instr 'move u s1))
-                          (E (make-asm-instr 'int+ u s2)))
-                        (make-asm-instr op 
-                           (make-disp u (make-constant 0))
-                           b)))]
-                   [(mem? s1)
-                    (let ([u (mku)])
-                      (make-seq
-                        (E (make-asm-instr 'move u s1))
-                        (E (make-asm-instr op (make-disp u s2) b))))]
-                   [(mem? s2)
-                    (let ([u (mku)])
-                      (make-seq
-                        (E (make-asm-instr 'move u s2))
-                        (E (make-asm-instr op (make-disp u s1) b))))]
-                   [else x]))])]
+               (check-disp a
+                 (lambda (a)
+                   (let ([s0 (disp-s0 a)] [s1 (disp-s1 a)])
+                     (cond
+                       [(and (constant? s0) (constant? s1))
+                        (let ([u (mku)])
+                          (make-seq
+                            (make-seq
+                              (E (make-asm-instr 'move u s0))
+                              (E (make-asm-instr 'int+ u s1)))
+                            (make-asm-instr op 
+                               (make-disp u (make-constant 0))
+                               b)))]
+                       [else (make-asm-instr op a b)]))))])]
            [(fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
              fl:load-single fl:store-single) 
-            (cond
-              [(mem? a) 
-               (let ([u (mku)])
-                 (make-seq
-                   (E (make-asm-instr 'move u a))
-                   (E (make-asm-instr op u b))))]
-              [else x])]
+            (check-disp-arg a
+              (lambda (a)
+                (check-disp-arg b
+                  (lambda (b)
+                    (make-asm-instr op a b)))))]
            [(fl:from-int fl:shuffle) x]
-           [else (error who "invalid effect" op)])]
+           [else (error who "invalid effect op" op)])]
         [(primcall op rands) 
          (case op
            [(nop interrupt incr/zero? fl:single->double
@@ -2290,6 +2390,24 @@
          (let ([body (E body)])
            (make-shortcut body (E handler)))]
         [else (error who "invalid effect" (unparse x))]))
+    (define (check-disp-arg x k)
+      (cond
+        [(small-operand? x)
+         (k x)]
+        [else
+         (let ([u (mku)])
+           (make-seq
+             (E (make-asm-instr 'move u x))
+             (k u)))]))
+    (define (check-disp x k)
+      (struct-case x 
+        [(disp a b)
+         (check-disp-arg a
+           (lambda (a)
+             (check-disp-arg b
+               (lambda (b)
+                 (k (make-disp a b))))))]
+        [else (k x)]))
     (define (P x)
       (struct-case x
         [(constant) x]
@@ -2299,18 +2417,33 @@
         [(asm-instr op a b) 
          (cond
            [(memq op '(fl:= fl:< fl:<= fl:> fl:>=)) 
-            (if (mem? a) 
+            (if (mem? a)
                 (let ([u (mku)])
                   (make-seq 
                     (E (make-asm-instr 'move u a))
                     (make-asm-instr op u b)))
                 x)]
-           [(and (mem? a) (mem? b)) 
+           [(and (not (mem? a)) (not (small-operand? a)))
+            (let ([u (mku)])
+              (make-seq
+                (E (make-asm-instr 'move u a))
+                (P (make-asm-instr op u b))))]
+           [(and (not (mem? b)) (not (small-operand? b)))
             (let ([u (mku)])
               (make-seq
                 (E (make-asm-instr 'move u b))
-                (make-asm-instr op a u)))]
-           [else x])]
+                (P (make-asm-instr op a u))))]
+           [(and (mem? a) (mem? b))
+            (let ([u (mku)])
+              (make-seq
+                (E (make-asm-instr 'move u b))
+                (P (make-asm-instr op a u))))]
+           [else 
+            (check-disp a
+              (lambda (a)
+                (check-disp b
+                  (lambda (b) 
+                    (make-asm-instr op a b)))))])]
         [(shortcut body handler)
          (let ([body (P body)])
            (make-shortcut body (P handler)))]
@@ -2367,12 +2500,7 @@
 
            
 (define (compile-call-frame framesize livemask-vec multiarg-rp call-sequence)
-  (let ([L_CALL (label (gensym))]
-        [padding 
-         (- call-instruction-size
-            (instruction-size call-sequence))])
-    (when (< padding 0) 
-      (error 'compile-call-frame "call sequence too long" call-sequence))
+  (let ([L_CALL (label (gensym))])
     (list 'seq
       (if (or (= framesize 0) (= framesize 1))
           '(seq) 
@@ -2382,9 +2510,9 @@
       `(int ,(* framesize wordsize))
       '(current-frame-offset)
       multiarg-rp
-      `(byte-vector ,(make-vector padding 0))
-      L_CALL
-      call-sequence
+      `(pad ,call-instruction-size
+            ,L_CALL
+            ,call-sequence)
       (if (or (= framesize 0) (= framesize 1))
           '(seq) 
           `(addl ,(* (fxsub1 framesize) wordsize) ,fpr)))))
@@ -2447,7 +2575,9 @@
       [else (error who "invalid reg/h" x)]))
   (define (reg/l x)
     (cond
-      [(assq x '([%eax %al] [%ebx %bl] [%ecx %cl] [%edx %dl]))
+      [(assq x '([%eax %al] [%ebx %bl] [%ecx %cl] [%edx %dl]
+                 [%r8 %r8l] [%r9 %r9l] [%r10 %r10l] [%r11 %r11l]
+                 [%r12 %r12l] [%r13 %r13l] [%r14 %r14l] [%r15 %r15l]))
        => cadr]
       [else (error who "invalid reg/l" x)])) 
   (define (R/cl x)
@@ -2455,7 +2585,7 @@
       [(constant i) 
        (unless (fixnum? i)
          (error who "invalid R/cl" x))
-       (fxlogand i 31)]
+       (fxlogand i (- (* wordsize 8) 1))]
       [else
        (if (eq? x ecx)
            '%cl
@@ -2492,33 +2622,27 @@
                (label-address (sl-mv-ignore-rp-label))))
          (cond
            [(string? target) ;; foreign call
-            (cons* ;`(subl ,(* (fxsub1 size) wordsize) ,fpr)
-                   `(movl (foreign-label "ik_foreign_call") %ebx)
+            (cons* `(movl (foreign-label "ik_foreign_call") %ebx)
                    (compile-call-frame 
                       size
                       mask
                       (rp-label value)
                       `(call %ebx))
-                   ;`(addl ,(* (fxsub1 size) wordsize) ,fpr)
                    ac)]
            [target ;;; known call
-            (cons* ;`(subl ,(* (fxsub1 size) wordsize) ,fpr)
-                   (compile-call-frame 
+            (cons* (compile-call-frame 
                       size
                       mask
                       (rp-label value)
                       `(call (label ,target)))
-                   ;`(addl ,(* (fxsub1 size) wordsize) ,fpr)
                    ac)]
            [else
-            (cons* ;`(subl ,(* (fxsub1 size) wordsize) ,fpr)
-                   (compile-call-frame 
+            (cons* (compile-call-frame 
                       size
                       mask
                       (rp-label value)
                       `(call (disp ,(fx- disp-closure-code closure-tag)
                                    ,cp-register)))
-                   ;`(addl ,(* (fxsub1 size) wordsize) ,fpr)
                    ac)]))]
       [(asm-instr op d s)
        (case op
@@ -2533,12 +2657,11 @@
           (if (eq? d s)
               ac
               (cons `(movl ,(R s) ,(R d)) ac))]
-         [(move-byte) 
+         [(load8) 
           (if (eq? d s)
               ac
               (cons `(movb ,(R/l s) ,(R/l d)) ac))]
-         [(bset/c) (cons `(movb ,(BYTE s) ,(R d)) ac)]
-         [(bset/h) (cons `(movb ,(reg/h s) ,(R d)) ac)]
+         [(bset) (cons `(movb ,(R/l s) ,(R d)) ac)]
          [(sll)  (cons `(sall ,(R/cl s) ,(R d)) ac)]
          [(sra)  (cons `(sarl ,(R/cl s) ,(R d)) ac)]
          [(srl)  (cons `(shrl ,(R/cl s) ,(R d)) ac)]
@@ -2548,10 +2671,18 @@
           (let ([s (R s)] [d (R d)])
             (unless (eq? s d) (error who "invalid instr" x))
             (cons `(bswap ,s) ac))]
+         [(mset32) (cons `(mov32 ,(R s) ,(R d)) ac)]
+         [(load32) (cons `(mov32 ,(R s) ,(R d)) ac)]
          [(int-/overflow)
           (let ([L (or (exception-label) 
                        (error who "no exception label"))])
             (cons* `(subl ,(R s) ,(R d)) 
+                   `(jo ,L)
+                   ac))]
+         [(sll/overflow)
+          (let ([L (or (exception-label) 
+                       (error who "no exception label"))])
+            (cons* `(sall ,(R/cl s) ,(R d))
                    `(jo ,L)
                    ac))]
          [(int*/overflow)
@@ -2598,7 +2729,7 @@
           (let ([l (or (exception-label)
                        (error who "no exception label"))])
             (cons* 
-              `(addl 1 ,(R (make-disp (car rands) (cadr rands))))
+              `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
               `(je ,l)
               ac))]
          [(fl:double->single)
@@ -2780,7 +2911,9 @@
            (addl eax eax) ; double the number of args
            (movl eax (mem (fx* -2 wordsize) fpr)) ; pass it as first arg
            (movl (int (argc-convention 1)) eax) ; setup argc
-           (movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
+           (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
+           (movl (mem (- disp-symbol-record-proc record-tag) cpr) cpr)
+           ;(movl (primref-loc 'do-vararg-overflow) cpr) ; load handler
            (compile-call-frame 0 '#() '(int 0) (indirect-cpr-call))
            (popl eax)     ; pop framesize and drop it
            (popl eax)     ; reload argc
@@ -2855,8 +2988,6 @@
                       (parameterize ([exceptions-conc ac])
                         (T body ac))))
              (map Clambda code*))]))
-  ;;;
-  ;;; (print-code x)
   (Program x))
 
 (define (print-code x)

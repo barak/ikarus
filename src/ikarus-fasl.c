@@ -110,12 +110,8 @@ void ik_fasl_load(ikpcb* pcb, char* fasl_file){
       }
       close(fd);
     }
-    if(wordsize == 4){
-      ik_exec_code(pcb, v);
-    } else {
-      fprintf(stderr, ";;; EXECING ...\n");
-      ikptr val = ik_exec_code(pcb, v);
-      fprintf(stderr, ";;; RETURNED ...\n");
+    ikptr val = ik_exec_code(pcb, v, 0, 0);
+    if(val != void_object){
       ik_print(val);
     }
   }
@@ -183,11 +179,17 @@ ik_relocate_code(ikptr code){
     else if(tag == 3){
       /* jump label */
       long int obj_off = unfix(ref(p, wordsize));
-      ikptr obj = ref(p, 2*wordsize);
-      ikptr displaced_object = obj + obj_off;
-      ikptr next_word = data + code_off + wordsize;
-      ikptr relative_distance = displaced_object - (long int)next_word;
-      ref(next_word, -wordsize) = relative_distance;
+      long int obj = ref(p, 2*wordsize);
+      long int displaced_object = obj + obj_off;
+      long int next_word = data + code_off + 4;
+      long int relative_distance = displaced_object - next_word;
+#if 0
+      if(wordsize == 8){
+        relative_distance += 4;
+      }
+#endif
+      *((int*)(data+code_off)) = relative_distance;
+//      ref(next_word, -wordsize) = relative_distance;
       p += (3*wordsize);
     }
     else if(tag == 1){
@@ -207,7 +209,7 @@ ik_relocate_code(ikptr code){
         fprintf(stderr, "failed to find foreign name %s: %s\n", name, err);
         exit(-1);
       }
-      ref(data,code_off) = (ikptr)(long)sym;
+      ref(data,code_off) = (ikptr)sym;
       p += (2*wordsize);
     }
     else {
@@ -273,9 +275,9 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     }
     else {
       /* allocate marks */
-      p->marks = (ikptr*)(long)ik_mmap(pagesize*sizeof(ikptr*));
-      bzero(p->marks, pagesize*sizeof(ikptr*));
-      p->marks_size = pagesize;
+      p->marks = (ikptr*)(long)ik_mmap(2*pagesize*sizeof(ikptr*));
+      bzero(p->marks, 2*pagesize*sizeof(ikptr*));
+      p->marks_size = 2*pagesize;
     }
   }
   if(c == 'x'){
@@ -289,7 +291,7 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     ref(code, disp_code_code_size) = fix(code_size);
     ref(code, disp_code_freevars) = freevars;
     ref(code, disp_code_annotation) = annotation;
-    fasl_read_buf(p, (void*)(long)code+disp_code_data, code_size);
+    fasl_read_buf(p, (void*)(disp_code_data+(long)code), code_size);
     if(put_mark_index){
       p->marks[put_mark_index] = code+vector_tag;
     }
@@ -550,6 +552,28 @@ static ikptr do_read(ikpcb* pcb, fasl_port* p){
     ikptr x = ik_unsafe_alloc(pcb, align(len + disp_bignum_data)) + vector_tag;
     ref(x, -vector_tag) = (ikptr) tag;
     fasl_read_buf(p, (void*)(long)(x+off_bignum_data), len);
+    if(put_mark_index){
+      p->marks[put_mark_index] = x;
+    }
+    return x;
+  }
+  else if(c == 'i'){
+    ikptr real = do_read(pcb, p);
+    ikptr imag = do_read(pcb, p);
+    ikptr x;
+    if ((tagof(real) == vector_tag) 
+         && (ref(real, -vector_tag) == flonum_tag)){
+      x = ik_unsafe_alloc(pcb, cflonum_size);
+      ref(x, 0) = cflonum_tag;;
+      ref(x, disp_cflonum_real) = real;
+      ref(x, disp_cflonum_imag) = imag;
+    } else {
+      x = ik_unsafe_alloc(pcb, compnum_size);
+      ref(x, 0) = compnum_tag;
+      ref(x, disp_compnum_real) = real;
+      ref(x, disp_compnum_imag) = imag;
+    }
+    x += vector_tag;
     if(put_mark_index){
       p->marks[put_mark_index] = x;
     }
