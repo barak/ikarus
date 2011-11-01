@@ -1,11 +1,20 @@
-ikarus (0.0.3-7) UNRELEASED; urgency=low
+ikarus (0.0.3+bzr.2010.01.26-1) unstable; urgency=low
 
   * dh --parallel
   * dh 8
-  * refresh autotools
   * update debian/watch for uscan
+  * supply pointer to vicare fork in README.Debian
+  * bump debian standards version
+  * refresh each build with dh_autoreconf
+  * move debian changes into quilt patches
+  * dpkg source format 3.0 (quilt)
+  * merge upstream snapshot
+    - bzr snapshot dated 2010.01.26, apparently aka 0.0.4rc1
+    - supports both unary and binary atan (closes: 499511)
+    - supports native amd64
+  * update man page ikarus(1) in debian/ikarus.1
 
- -- Barak A. Pearlmutter <bap@debian.org>  Thu, 17 Feb 2011 22:34:45 +0000
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue, 01 Nov 2011 13:03:51 +0000
 
 ikarus (0.0.3-6) unstable; urgency=low
 
