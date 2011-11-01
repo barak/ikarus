@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Barak A. Pearlmutter <bap@debian.org>
 Build-Depends: debhelper (>= 8),
 	       dh-autoreconf,
-	       libgmp3-dev
+	       libgmp-dev
 Standards-Version: 3.9.2
 Homepage: http://ikarus-scheme.org/
 Vcs-Git: git://git.debian.org/git/collab-maint/ikarus.git
