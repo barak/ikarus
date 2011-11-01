@@ -3,7 +3,7 @@ Section: lisp
 Priority: extra
 Maintainer: Barak A. Pearlmutter <bap@debian.org>
 Build-Depends: debhelper (>= 8),
-	       autotools-dev (>= 20100122.1~),
+	       dh-autoreconf,
 	       libgmp3-dev
 Standards-Version: 3.9.2
 Homepage: http://ikarus-scheme.org/
