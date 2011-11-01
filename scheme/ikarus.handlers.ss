@@ -13,23 +13,22 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 (library (ikarus system parameters)
   (export make-parameter)
   (import (except (ikarus) make-parameter))
   (define make-parameter
-    (case-lambda
-      [(x) 
-       (case-lambda
-         [() x]
-         [(v) (set! x v)])]
-      [(x guard)
-       (unless (procedure? guard)
-         (die 'make-parameter "not a procedure" guard))
-       (set! x (guard x))
-       (case-lambda
-         [() x]
-         [(v) (set! x (guard v))])])))
+    (let ()
+      (import (ikarus))
+      (case-lambda
+        [(x guard) (make-parameter x guard)]
+        [(x) (make-parameter x)]))))
+
+(library (ikarus.pointer-value)
+  (export pointer-value)
+  (import (only (ikarus) define import))
+  (define (pointer-value x)
+    (import (ikarus))
+    (pointer-value x)))
 
 
 (library (ikarus system handlers)
@@ -38,14 +37,13 @@
     $incorrect-args-error-handler $multiple-values-error $debug
     $underflow-misaligned-error top-level-value-error car-error
     cdr-error fxadd1-error fxsub1-error cadr-error fx+-type-error
-    fx+-types-error fx+-overflow-error $do-event)
-  (import (except (ikarus) interrupt-handler)
+    fx+-types-error fx+-overflow-error $do-event engine-handler)
+  (import (except (ikarus) interrupt-handler engine-handler)
           (only (ikarus system $interrupts) $interrupted? $unset-interrupted!))
 
   (define interrupt-handler
     (make-parameter
       (lambda ()
-        (import (ikarus system interrupts))
         ; FIXME
         ;(set-port-output-index! (console-output-port) 0)
         (raise-continuable
@@ -57,13 +55,21 @@
             x
             (die 'interrupt-handler "not a procedure" x)))))
 
+  (define engine-handler
+    (make-parameter
+      void
+      (lambda (x)
+        (if (procedure? x)
+            x
+            (die 'engine-handler "not a procedure" x)))))
+
   (define $apply-nonprocedure-error-handler
     (lambda (x)
       (die 'apply "not a procedure" x)))
   
   (define $incorrect-args-error-handler
-    (lambda (p n)
-      (die 'apply "incorrect number of arguments" n p)))
+    (lambda (p . ls)
+      (apply die 'apply "incorrect number of arguments" p ls)))
   
   (define $multiple-values-error
     (lambda args
@@ -128,7 +134,11 @@
   
   (define $do-event
     (lambda ()
-      (when ($interrupted?)
-        ($unset-interrupted!)
-        ((interrupt-handler)))))
+      (cond
+        [($interrupted?)
+         ($unset-interrupted!)
+         ((interrupt-handler))]
+        [else
+         ((engine-handler))])))
+
   )

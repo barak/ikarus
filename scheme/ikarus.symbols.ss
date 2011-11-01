@@ -14,21 +14,21 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus base symbols)
+(library (ikarus.symbols)
   (export gensym gensym? gensym->unique-string gensym-prefix
-          gensym-count print-gensym string->symbol symbol->string
+          gensym-count print-gensym symbol->string
           getprop putprop remprop property-list
           top-level-value top-level-bound? set-top-level-value!
           symbol-value symbol-bound? set-symbol-value!
-          reset-symbol-proc!)
+          $unintern-gensym
+          reset-symbol-proc! system-value system-value-gensym)
   (import 
-    (ikarus system $symbols)
+    (except (ikarus system $symbols) $unintern-gensym)
     (ikarus system $pairs)
     (ikarus system $fx)
     (except (ikarus) gensym gensym? gensym->unique-string
-      gensym-prefix gensym-count print-gensym
-      string->symbol symbol->string
-      getprop putprop remprop property-list
+      gensym-prefix gensym-count print-gensym system-value
+      symbol->string getprop putprop remprop property-list
       top-level-value top-level-bound? set-top-level-value!
       symbol-value symbol-bound? set-symbol-value! reset-symbol-proc!))
 
@@ -44,9 +44,14 @@
 
   (define gensym?
     (lambda (x)
-      (and (symbol? x) 
+      (and (symbol? x)
            (let ([s ($symbol-unique-string x)])
              (and s #t)))))
+
+  (define ($unintern-gensym x)
+    (if (symbol? x)
+        (begin (foreign-call "ikrt_unintern_gensym" x) (void))
+        (die 'unintern-gensym "not a symbol" x)))
 
   (define top-level-value
     (lambda (x)
@@ -54,9 +59,13 @@
         (die 'top-level-value "not a symbol" x))
       (let ([v ($symbol-value x)])
         (when ($unbound-object? v)
-          (die 'eval "unbound variable" 
-            (string->symbol
-              (symbol->string x))))
+          (raise
+            (condition
+              (make-undefined-violation)
+              (make-who-condition 'eval)
+              (make-message-condition "unbound variable")
+              (make-irritants-condition 
+                (list (string->symbol (symbol->string x)))))))
         v)))
 
   (define top-level-bound?
@@ -104,13 +113,10 @@
           (if (procedure? v)
               v
               (lambda args
-                (let ([v ($symbol-value x)])
-                  (if ($unbound-object? v)
-                      (die 'eval "unbound variable" 
-                        (string->symbol
-                          (symbol->string x)))
-                      (die 'apply "not a procedure" v)))))))))
+                (die 'apply "not a procedure" 
+                  (top-level-value x))))))))
 
+  #;
   (define string->symbol
     (lambda (x)
       (unless (string? x) 
@@ -222,6 +228,22 @@
         (unless (or (boolean? x) (eq? x 'pretty))
           (die 'print-gensym "not in #t|#f|pretty" x))
         x)))
+
+  (define system-value-gensym (gensym))
+
+  (define (system-value x)
+    (unless (symbol? x)
+      (die 'system-value "not a symbol" x))
+    (cond
+      [(getprop x system-value-gensym) =>
+       (lambda (g)
+         (let ([v ($symbol-value g)])
+           (when ($unbound-object? v)
+             (die 'system-value "not a system symbol" x))
+           v))]
+      [else (die 'system-value "not a system symbol" x)]))
+
+
 
   )
 

@@ -16,14 +16,14 @@
 
 (library (ikarus exceptions)
   (export with-exception-handler raise raise-continuable 
-    error assertion-violation die)
+    error warning assertion-violation die)
   (import 
     (only (rnrs) condition make-non-continuable-violation
           make-message-condition make-error make-who-condition
           make-irritants-condition make-assertion-violation)
     (except (ikarus)
       with-exception-handler raise raise-continuable 
-      error assertion-violation die))
+      error warning assertion-violation die))
 
   (define handlers
     (make-parameter
@@ -31,7 +31,9 @@
         (lambda (x) 
           (display "Unhandled exception:\n" (console-error-port))
           (print-condition x (console-error-port))
-          (exit -1)))))
+          (when (serious-condition? x)
+            (exit -1)))
+        (lambda args (exit -1)))))
   
   (define (with-exception-handler handler proc2)
     (unless (procedure? handler)
@@ -58,32 +60,24 @@
               (make-non-continuable-violation)
               (make-message-condition "handler returned")))))))
 
-  (define (error who msg . irritants) 
-    (unless (string? msg) 
-      (assertion-violation 'error "message is not a string" msg))
-    (raise
+  (define (err who* raise* cond* who msg irritants)
+    (unless (string? msg)
+      (assertion-violation who* "message is not a string" msg))
+    (raise*
        (condition
-         (make-error)
+         (cond*)
          (if who (make-who-condition who) (condition))
          (make-message-condition msg)
-         (if (null? irritants) 
-             (condition)
-             (make-irritants-condition irritants)))))
+         (make-irritants-condition irritants))))
 
-  (define (assertion-violation who msg . irritants) 
-    (unless (string? msg) 
-      (assertion-violation 'assertion-violation "message is not a string" msg))
-    (raise
-       (condition
-         (make-assertion-violation)
-         (if who (make-who-condition who) (condition))
-         (make-message-condition msg)
-         (if (null? irritants) 
-             (condition)
-             (make-irritants-condition irritants)))))
-
-  (define die assertion-violation)
-  
+  (define (error who msg . irritants)
+    (err 'error raise make-error who msg irritants))
+  (define (assertion-violation who msg . irritants)
+    (err 'assertion-violation raise make-assertion-violation who msg irritants))
+  (define (warning who msg . irritants)
+    (err 'warning raise-continuable make-warning who msg irritants))
+  (define (die who msg . irritants)
+    (err 'die raise make-assertion-violation who msg irritants))
 
 )
 

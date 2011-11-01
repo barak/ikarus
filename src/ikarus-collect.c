@@ -114,8 +114,8 @@ next_gen_tag[generation_count] = {
 };
 
 static ikptr
-meta_alloc_extending(int size, gc_t* gc, int meta_id){
-  int mapsize = align_to_next_page(size);
+meta_alloc_extending(long int size, gc_t* gc, int meta_id){
+  long int mapsize = align_to_next_page(size);
   if(mapsize < extension_amount[meta_id]){
     mapsize = extension_amount[meta_id];
   }
@@ -151,7 +151,7 @@ meta_alloc_extending(int size, gc_t* gc, int meta_id){
 
 
 static inline ikptr
-meta_alloc(int size, gc_t* gc, int meta_id){
+meta_alloc(long int size, gc_t* gc, int meta_id){
   assert(size == align(size));
   meta_t* meta = &gc->meta[meta_id];
   ikptr ap = meta->ap;
@@ -191,8 +191,8 @@ gc_alloc_new_large_ptr(int size, gc_t* gc){
 
 static inline void 
 enqueue_large_ptr(ikptr mem, int size, gc_t* gc){
-  int i = page_index(mem);
-  int j = page_index(mem+size-1);
+  long int i = page_index(mem);
+  long int j = page_index(mem+size-1);
   while(i<=j){
     gc->segment_vector[i] = 
       pointers_mt | large_object_tag | gc->collect_gen_tag;
@@ -252,12 +252,12 @@ gc_alloc_new_data(int size, gc_t* gc){
 }
 
 static inline ikptr 
-gc_alloc_new_code(int size, gc_t* gc){
+gc_alloc_new_code(long int size, gc_t* gc){
   assert(size == align(size));
   if(size < pagesize){
     return meta_alloc(size, gc, meta_code);
   } else {
-    int memreq = align_to_next_page(size);
+    long int memreq = align_to_next_page(size);
     ikptr mem = ik_mmap_code(memreq, gc->collect_gen, gc->pcb);
     gc->segment_vector = gc->pcb->segment_vector;
     qupages_t* p = ik_malloc(sizeof(qupages_t));
@@ -329,6 +329,7 @@ static ikptr add_object_proc(gc_t* gc, ikptr x);
 #endif
 
 static void collect_stack(gc_t*, ikptr top, ikptr base);
+static void collect_locatives(gc_t*, callback_locative*);
 static void collect_loop(gc_t*);
 static void fix_weak_pointers(gc_t*);
 static void gc_add_tconcs(gc_t*);
@@ -347,6 +348,7 @@ static void gc_add_tconcs(gc_t*);
  *    the real end of heap.
  * 6. ik_collect should not move the stack.
  */
+
 
 
 ikpcb* ik_collect_vararg(int req, ikpcb* pcb){
@@ -371,9 +373,19 @@ static void fix_new_pages(gc_t* gc);
 
 extern void verify_integrity(ikpcb* pcb, char*);
 
+ikptr ik_collect_check(unsigned long int req, ikpcb* pcb){
+  long int bytes = ((long int)pcb->allocation_redline) -
+                   ((long int)pcb->allocation_pointer);
+  if (bytes >= req) {
+    return true_object;
+  } else {
+    ik_collect(req, pcb);
+    return false_object;
+  }
+}
 
 ikpcb* 
-ik_collect(int mem_req, ikpcb* pcb){
+ik_collect(unsigned long int mem_req, ikpcb* pcb){
 #ifndef NDEBUG
   verify_integrity(pcb, "entry");
 #endif
@@ -399,10 +411,9 @@ ik_collect(int mem_req, ikpcb* pcb){
   gc.collect_gen_tag = next_gen_tag[gc.collect_gen];
   pcb->collection_id++;
 #ifndef NDEBUG
-  fprintf(stderr, "ik_collect entry %d free=%d (collect gen=%d/id=%d)\n",
+  fprintf(stderr, "ik_collect entry %ld free=%ld (collect gen=%d/id=%d)\n",
       mem_req,
-      (unsigned int) pcb->allocation_redline
-        - (unsigned int) pcb->allocation_pointer,
+       pcb->allocation_redline - pcb->allocation_pointer,
       gc.collect_gen, pcb->collection_id-1);
 #endif
 
@@ -420,6 +431,7 @@ ik_collect(int mem_req, ikpcb* pcb){
   scan_dirty_pages(&gc);
 
   collect_stack(&gc, pcb->frame_pointer, pcb->frame_base - wordsize);
+  collect_locatives(&gc, pcb->callbacks);
   pcb->next_k = add_object(&gc, pcb->next_k, "next_k"); 
   pcb->symbol_table = add_object(&gc, pcb->symbol_table, "symbol_table"); 
   pcb->gensym_table = add_object(&gc, pcb->gensym_table, "gensym_table"); 
@@ -483,8 +495,6 @@ ik_collect(int mem_req, ikpcb* pcb){
 #endif
 
 
-
-
   /* delete all old heap pages */
   if(old_heap_pages){
     ikpages* p = old_heap_pages;
@@ -497,12 +507,12 @@ ik_collect(int mem_req, ikpcb* pcb){
     old_heap_pages = 0;
   }
 
-  long int free_space = 
+  unsigned long int free_space = 
     ((unsigned long int)pcb->allocation_redline) - 
     ((unsigned long int)pcb->allocation_pointer);
   if((free_space <= mem_req) || (pcb->heap_size < IK_HEAPSIZE)){
 #ifndef NDEBUG
-    fprintf(stderr, "REQ=%d, got %d\n", mem_req, free_space);
+    fprintf(stderr, "REQ=%ld, got %ld\n", mem_req, free_space);
 #endif
     long int memsize = (mem_req > IK_HEAPSIZE) ? mem_req : IK_HEAPSIZE;
     memsize = align_to_next_page(memsize);
@@ -563,8 +573,6 @@ ik_collect(int mem_req, ikpcb* pcb){
    pcb->collect_rtime.tv_usec += 1000000;
    pcb->collect_rtime.tv_sec -= 1;
   }
- 
-
   return pcb;
 }
 
@@ -590,7 +598,7 @@ is_live(ikptr x, gc_t* gc){
 
 static inline int 
 next_gen(int i){
-  return ((i == generation_count) ? generation_count : (i+1));
+  return ((i == (generation_count-1)) ? i : (i+1));
 }
 
  
@@ -754,22 +762,22 @@ add_code_entry(gc_t* gc, ikptr entry){
   if(ref(x,0) == forward_ptr){
     return ref(x,wordsize) + off_code_data;
   }
-  int idx = page_index(x);
+  long int idx = page_index(x);
   unsigned int t = gc->segment_vector[idx];
   int gen = t & gen_mask;
   if(gen > gc->collect_gen){
     return entry;
   }
-  int code_size = unfix(ref(x, disp_code_code_size));
+  long int code_size = unfix(ref(x, disp_code_code_size));
   ikptr reloc_vec = ref(x, disp_code_reloc_vector);
   ikptr freevars = ref(x, disp_code_freevars);
   ikptr annotation = ref(x, disp_code_annotation);
-  int required_mem = align(disp_code_data + code_size);
+  long int required_mem = align(disp_code_data + code_size);
   if(required_mem >= pagesize){
     int new_tag = gc->collect_gen_tag;
-    int idx = page_index(x);
+    long int idx = page_index(x);
     gc->segment_vector[idx] = new_tag | code_mt;
-    int i;
+    long int i;
     for(i=pagesize, idx++; i<required_mem; i+=pagesize, idx++){
       gc->segment_vector[idx] = new_tag | data_mt;
     }
@@ -795,25 +803,33 @@ add_code_entry(gc_t* gc, ikptr entry){
   }
 }
 
+static void 
+collect_locatives(gc_t* gc, callback_locative* loc) {
+  while(loc) {
+    loc->data = add_object(gc, loc->data, "locative");
+    loc = loc->next;
+  }
+}
 
 #define DEBUG_STACK 0
 
 static void collect_stack(gc_t* gc, ikptr top, ikptr end){
   if(DEBUG_STACK){
-    fprintf(stderr, "collecting stack from 0x%016lx .. 0x%016lx\n", 
-        (long) top, (long) end);
+    fprintf(stderr, "collecting stack (size=%ld) from 0x%016lx .. 0x%016lx\n", 
+        (long)end - (long)top, (long) top, (long) end);
   }
   while(top < end){
     if(DEBUG_STACK){
-      fprintf(stderr, "collecting frame at 0x%016lx: ", (long) top);
+      fprintf(stderr, "collecting frame at 0x%016lx: \n", (long) top);
     }
     ikptr rp = ref(top, 0);
     long int rp_offset = unfix(ref(rp, disp_frame_offset));
     if(DEBUG_STACK){
-      fprintf(stderr, "rp_offset=%ld\n", (long)rp_offset);
+      fprintf(stderr, "rp=0x%016lx\n", rp);
+      fprintf(stderr, "rp_offset=%ld\n", rp_offset);
     }
     if(rp_offset <= 0){
-      fprintf(stderr, "invalid rp_offset %ld\n", (long)rp_offset);
+      fprintf(stderr, "invalid rp_offset %ld\n", rp_offset);
       exit(-1);
     }
     /* since the return point is alive, we need to find the code
@@ -890,7 +906,7 @@ static void collect_stack(gc_t* gc, ikptr top, ikptr end){
       for(i=0; i<bytes_in_mask; i++, fp-=8){
         unsigned char m = mask[i];
 #if DEBUG_STACK
-        fprintf(stderr, "m[%d]=0x%x\n", i, m);
+        fprintf(stderr, "m[%ld]=0x%x\n", i, m);
 #endif
         if(m & 0x01) { fp[-0] = add_object(gc, fp[-0], "frame0"); }
         if(m & 0x02) { fp[-1] = add_object(gc, fp[-1], "frame1"); }
@@ -970,11 +986,11 @@ add_list(gc_t* gc, unsigned int t, ikptr x, ikptr* loc){
 
 static ikptr 
 #ifndef NDEBUG
-add_object_proc(gc_t* gc, ikptr x, char* caller)
+add_object_proc(gc_t* gc, ikptr x, char* caller) {
+  caller = caller;
 #else
-add_object_proc(gc_t* gc, ikptr x)
+add_object_proc(gc_t* gc, ikptr x) {
 #endif
-{
   if(is_fixnum(x)){ 
     return x;
   } 
@@ -1044,7 +1060,7 @@ add_object_proc(gc_t* gc, ikptr x)
       /* real vector */
       //fprintf(stderr, "X=0x%08x, FST=0x%08x\n", (int)x, (int)fst);
       ikptr size = fst;
-      assert(size >= 0);
+      assert(((long)size) >= 0);
       ikptr memreq = align(size + disp_vector_data);
       if(memreq >= pagesize){
         if((t & large_object_mask) == large_object_tag){
@@ -1141,7 +1157,7 @@ add_object_proc(gc_t* gc, ikptr x)
       ikptr size =  ref(x, off_continuation_size);
 #ifndef NDEBUG
       if(size > 4096){
-        fprintf(stderr, "large cont size=0x%08x\n", size);
+        fprintf(stderr, "large cont size=0x%016lx\n", size);
       }
 #endif
       ikptr next = ref(x, off_continuation_next);
@@ -1162,6 +1178,18 @@ add_object_proc(gc_t* gc, ikptr x)
 #endif
       return y;
     }
+    else if(fst == system_continuation_tag) {
+      ikptr y = gc_alloc_new_data(system_continuation_size, gc) + vector_tag;
+      ikptr top = ref(x, disp_system_continuation_top - vector_tag);
+      ikptr next = ref(x, disp_system_continuation_next - vector_tag);
+      ref(x, -vector_tag) = forward_ptr;
+      ref(x, wordsize-vector_tag) = y;
+      ref(y, -vector_tag) = fst;
+      ref(y, disp_system_continuation_top - vector_tag) = top;
+      ref(y, disp_system_continuation_next - vector_tag) =
+        add_object(gc, next, "next_k");
+      return y;
+    }
     else if(tagof(fst) == pair_tag){
       /* tcbucket */
       ikptr y = gc_alloc_new_ptr(tcbucket_size, gc) + vector_tag;
@@ -1171,8 +1199,8 @@ add_object_proc(gc_t* gc, ikptr x)
       ref(y,off_tcbucket_val) = ref(x, off_tcbucket_val);
       ref(y,off_tcbucket_next) = ref(x, off_tcbucket_next);
       if((! is_fixnum(key)) && (tagof(key) != immediate_tag)){
-        unsigned int kt = gc->segment_vector[page_index(key)];
-        if((kt & gen_mask) <= gc->collect_gen){
+        int gen = gc->segment_vector[page_index(key)] & gen_mask;
+        if(gen <= gc->collect_gen){
           /* key will be moved */
           gc_tconc_push(gc, y);
         }
@@ -1220,6 +1248,36 @@ add_object_proc(gc_t* gc, ikptr x)
       ref(y, -vector_tag) = fst;
       ref(y, disp_ratnum_num-vector_tag) = add_object(gc, num, "num");
       ref(y, disp_ratnum_den-vector_tag) = add_object(gc, den, "den");
+      return y;
+    }
+    else if(fst == compnum_tag){
+      ikptr y = gc_alloc_new_data(compnum_size, gc) + vector_tag;
+      ikptr rl = ref(x, disp_compnum_real-vector_tag);
+      ikptr im = ref(x, disp_compnum_imag-vector_tag);
+      ref(x, -vector_tag) = forward_ptr;
+      ref(x, wordsize-vector_tag) = y;
+      ref(y, -vector_tag) = fst;
+      ref(y, disp_compnum_real-vector_tag) = add_object(gc, rl, "real");
+      ref(y, disp_compnum_imag-vector_tag) = add_object(gc, im, "imag");
+      return y;
+    }
+    else if(fst == cflonum_tag){
+      ikptr y = gc_alloc_new_data(cflonum_size, gc) + vector_tag;
+      ikptr rl = ref(x, disp_cflonum_real-vector_tag);
+      ikptr im = ref(x, disp_cflonum_imag-vector_tag);
+      ref(x, -vector_tag) = forward_ptr;
+      ref(x, wordsize-vector_tag) = y;
+      ref(y, -vector_tag) = fst;
+      ref(y, disp_cflonum_real-vector_tag) = add_object(gc, rl, "real");
+      ref(y, disp_cflonum_imag-vector_tag) = add_object(gc, im, "imag");
+      return y;
+    }
+    else if(fst == pointer_tag){
+      ikptr y = gc_alloc_new_data(pointer_size, gc) + vector_tag;
+      ref(y, -vector_tag) = pointer_tag;
+      ref(y, wordsize-vector_tag) = ref(x, wordsize-vector_tag);
+      ref(x, -vector_tag) = forward_ptr;
+      ref(x, wordsize-vector_tag) = y;
       return y;
     }
     else {
@@ -1311,9 +1369,14 @@ relocate_new_code(ikptr x, gc_t* gc){
 #endif
       obj = add_object(gc, obj, "reloc3");
       ikptr displaced_object = obj + obj_off;
-      ikptr next_word = code + code_off + wordsize;
+      long int next_word = code + code_off + 4;
       ikptr relative_distance = displaced_object - (long int)next_word;
-      ref(next_word, -wordsize) = relative_distance;
+      if(((long int)relative_distance) != ((long)((int)relative_distance))){
+        fprintf(stderr, "relocation error with relative=0x%016lx\n", 
+            relative_distance);
+        exit(-1);
+      }
+      *((int*)(code+code_off)) = (int)relative_distance;
       p += (3*wordsize);
     }
     else if(tag == 1){
@@ -1632,8 +1695,8 @@ scan_dirty_pointers_page(gc_t* gc, long int page_idx, int mask){
   dirty_vec[page_idx] = new_d;
 }
 
-static void            
-scan_dirty_code_page(gc_t* gc, long int page_idx, unsigned int mask){
+static void
+scan_dirty_code_page(gc_t* gc, long int page_idx){
   ikptr p = (ikptr)(page_idx << pageshift);
   ikptr start = p;
   ikptr q = p + pagesize;
@@ -1654,8 +1717,8 @@ scan_dirty_code_page(gc_t* gc, long int page_idx, unsigned int mask){
       segment_vec = gc->segment_vector;
       ikptr rvec = ref(p, disp_code_reloc_vector);
       ikptr len = ref(rvec, off_vector_length);
-      assert(len >= 0);
-      long int i;
+      assert(((long)len) >= 0);
+      unsigned long int i;
       unsigned long int code_d = segment_vec[page_index(rvec)];
       for(i=0; i<len; i+=wordsize){
         ikptr r = ref(rvec, i+off_vector_data);
@@ -1694,7 +1757,8 @@ scan_dirty_pages(gc_t* gc){
     unsigned int d = dirty_vec[i];
     if(d & mask){
       unsigned int t = segment_vec[i];
-      if((t & gen_mask) > collect_gen){
+      int tgen = t & gen_mask;
+      if(tgen > collect_gen){
         int type = t & type_mask;
         if(type == pointers_type){
           scan_dirty_pointers_page(gc, i, mask);
@@ -1712,11 +1776,9 @@ scan_dirty_pages(gc_t* gc){
           segment_vec = (unsigned int*)(long)pcb->segment_vector;
         }
         else if (type == code_type){
-          if((t & gen_mask) > collect_gen){
-            scan_dirty_code_page(gc, i, mask);
-            dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
-            segment_vec = (unsigned int*)(long)pcb->segment_vector;
-          }
+          scan_dirty_code_page(gc, i);
+          dirty_vec = (unsigned int*)(long)pcb->dirty_vector;
+          segment_vec = (unsigned int*)(long)pcb->segment_vector;
         }
         else if (t & scannable_mask) {
           fprintf(stderr, "BUG: unhandled scan of type 0x%08x\n", t);

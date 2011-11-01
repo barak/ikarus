@@ -75,7 +75,11 @@
 
   (define (record-type-uid x)
     (if (rtd? x)
-        (rtd-uid x)
+        (or (rtd-uid x)
+            (let ([g (gensym)])
+              (set-rtd-uid! x g) 
+              (intern-rtd! g x)
+              g))
         (die 'record-type-uid "not an rtd" x)))
 
   (define (record-type-sealed? x)
@@ -90,7 +94,7 @@
 
   (define (record-type-generative? x)
     (if (rtd? x)
-        (not (rtd-sealed? x))
+        (not (rtd-sealed? x)) ;;; FIXME: bogus?
         (die 'record-type-generative? "not an rtd" x)))
 
   (define (record-type-field-names x)
@@ -251,7 +255,7 @@
             (if (pair? ls) 
                 (let-values ([(m p) (f (cdr ls) (- n 1))]) 
                   (values (cons (car ls) m) p))
-                (die 'record-condtructor "insufficient arguments"
+                (die 'record-constructor "insufficient arguments"
                        all-fields)))))
 
     (define (constructor main-rtd size prcd proto)
@@ -443,11 +447,11 @@
         (car (vector-ref (rtd-fields rtd) k)))))
 
   (set-rtd-printer! (type-descriptor rtd)
-    (lambda (x p) 
+    (lambda (x p wr) 
       (display (format "#<record-type-descriptor ~s>" (rtd-name x)) p)))
 
   (set-rtd-printer! (type-descriptor rcd)
-    (lambda (x p) 
+    (lambda (x p wr) 
       (display (format "#<record-constructor-descriptor ~s>"
                        (rtd-name (rcd-rtd x))) p)))
                   

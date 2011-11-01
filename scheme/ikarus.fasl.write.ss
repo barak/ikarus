@@ -14,7 +14,7 @@
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus fasl write)
+(library (ikarus.fasl.write)
   (export fasl-write)
   (import
     (rnrs hashtables)
@@ -27,22 +27,33 @@
     (ikarus system $strings)
     (ikarus system $flonums)
     (ikarus system $bignums)
-    (except (ikarus code-objects) procedure-annotation)
+    (except (ikarus.code-objects) procedure-annotation)
     (except (ikarus) fasl-write write-byte))
  
   (module (wordsize)
+    (import (ikarus include))
     (include "ikarus.config.ss"))
 
-  (define-syntax fxshift 
-    (identifier-syntax
-      (case wordsize
-        [(4) 2]
-        [(8) 3]
-        [else (error 'fxshift "invalid wordsize" wordsize)])))
+  ;;; (define-syntax fxshift 
+  ;;;   (identifier-syntax
+  ;;;     (case wordsize
+  ;;;       [(4) 2]
+  ;;;       [(8) 3]
+  ;;;       [else (error 'fxshift "invalid wordsize" wordsize)])))
 
-  (define-syntax intbits (identifier-syntax (* wordsize 8)))
+  ;;; (define-syntax intbits (identifier-syntax (* wordsize 8)))
 
-  (define-syntax fxbits (identifier-syntax (- intbits fxshift)))
+  ;;; (define-syntax fxbits (identifier-syntax (- intbits fxshift)))
+
+  (define fxshift 
+    (case wordsize
+      [(4) 2]
+      [(8) 3]
+      [else (error 'fxshift "invalid wordsize" wordsize)]))
+
+  (define intbits (* wordsize 8))
+
+  (define fxbits (- intbits fxshift))
 
   (define (fx? x)
     (and (or (fixnum? x) (bignum? x)) 
@@ -188,36 +199,63 @@
                (write-byte (code-ref x i) p)
                (f (fxadd1 i) n)))
            (fasl-write-object (code-reloc-vector x) p h m))]
+        [(hashtable? x)
+         (let ([v (hashtable-ref h x #f)])
+           (if (eq? eq? (hashtable-equivalence-function x))
+               (put-tag #\h p)
+               (put-tag #\H p))
+           (fasl-write-object (vector-ref v 2) p h
+             (fasl-write-object (vector-ref v 1) p h m)))]
         [(struct? x)
-         (let ([rtd (struct-type-descriptor x)])
-           (cond
-             [(eq? rtd (base-rtd))
-              ;;; rtd record
-              (put-tag #\R p)
-              (let ([names (struct-type-field-names x)]
-                    [m 
-                     (fasl-write-object (struct-type-symbol x) p h
-                       (fasl-write-object (struct-type-name x) p h m))])
-                (write-int (length names) p)
-                (let f ([names names] [m m])
+         (cond
+           [(record-type-descriptor? x)
+            (put-tag #\W p)
+            (let* ([m (fasl-write-object (record-type-name x) p h m)]
+                   [m (fasl-write-object (record-type-parent x) p h m)]
+                   [m (fasl-write-object (record-type-uid x) p h m)])
+              (fasl-write-immediate (record-type-sealed? x) p)
+              (fasl-write-immediate (record-type-opaque? x) p)
+              (let* ([fields (record-type-field-names x)]
+                     [n (vector-length fields)])
+                (fasl-write-immediate n p)
+                (let f ([i 0] [m m])
                   (cond
-                    [(null? names) m]
+                    [(= i n) m]
                     [else
-                     (f (cdr names)
-                        (fasl-write-object (car names) p h m))])))]
-             [else
-              ;;; non-rtd record
-              (put-tag #\{ p)
-              (write-int (length (struct-type-field-names rtd)) p)
-              (let f ([names (struct-type-field-names rtd)] 
-                      [m (fasl-write-object rtd p h m)])
-                (cond
-                  [(null? names) m]
-                  [else
-                   (f (cdr names) 
-                      (fasl-write-object 
-                         ((struct-field-accessor rtd (car names)) x)
-                         p h m))]))]))]
+                     (fasl-write-immediate (record-field-mutable? x i) p)
+                     (f (+ i 1) 
+                        (fasl-write-object (vector-ref fields i) p h m))]))))]
+           [else
+            (let ([rtd (struct-type-descriptor x)])
+              (cond
+                [(eq? rtd (base-rtd))
+                 ;;; rtd record
+                 (put-tag #\R p)
+                 (let ([names (struct-type-field-names x)]
+                       [m 
+                        (fasl-write-object (struct-type-symbol x) p h
+                          (fasl-write-object (struct-type-name x) p h m))])
+                   (write-int (length names) p)
+                   (let f ([names names] [m m])
+                     (cond
+                       [(null? names) m]
+                       [else
+                        (f (cdr names)
+                           (fasl-write-object (car names) p h m))])))]
+                [else
+                 ;;; non-rtd record
+                 (put-tag #\{ p)
+                 (let ([n (struct-length x)])
+                   (write-int n p)
+                   (let f ([i 0] 
+                           [m (fasl-write-object rtd p h m)])
+                     (cond
+                       [(= i n) m]
+                       [else
+                        (f (+ i 1)
+                           (fasl-write-object 
+                              (struct-ref x i)
+                              p h m))])))]))])]
         [(procedure? x)
          (put-tag #\Q p)
          (fasl-write-object ($closure-code x) p h m)]
@@ -251,6 +289,10 @@
                (write-byte ($bignum-byte-ref x i) p)
                (f (fxadd1 i)))))
          m]
+        [(or (compnum? x) (cflonum? x))
+         (put-tag #\i p)
+         (fasl-write-object (imag-part x) p h
+           (fasl-write-object (real-part x) p h m))]
         [else (die 'fasl-write "not fasl-writable" x)])))
   (define (write-bytevector x i j p)
     (unless ($fx= i j)
@@ -261,21 +303,22 @@
       (cond
         [(immediate? x) (fasl-write-immediate x p) m]
         [(hashtable-ref h x #f) =>
-         (lambda (mark)
-           (unless (fixnum? mark)
-             (die 'fasl-write "BUG: invalid mark" mark))
-           (cond
-             [(fx= mark 0) ; singly referenced
-              (do-write x p h m)]
-             [(fx> mark 0) ; marked but not written
-              (hashtable-set! h x (fx- 0 m))
-              (put-tag #\> p)
-              (write-int32 m p)
-              (do-write x p h (fxadd1 m))]
-             [else
-              (put-tag #\< p)
-              (write-int32 (fx- 0 mark) p)
-              m]))]
+         (lambda (mk)
+           (let ([mark (if (fixnum? mk) mk (vector-ref mk 0))])
+             (cond
+               [(fx= mark 0) ; singly referenced
+                (do-write x p h m)]
+               [(fx> mark 0) ; marked but not written
+                (if (fixnum? mk)
+                    (hashtable-set! h x (fx- 0 m))
+                    (vector-set! mk 0 (fx- 0 m)))
+                (put-tag #\> p)
+                (write-int32 m p)
+                (do-write x p h (fxadd1 m))]
+               [else
+                (put-tag #\< p)
+                (write-int32 (fx- 0 mark) p)
+                m])))]
         [else (die 'fasl-write "BUG: not in hash table" x)]))) 
   (define make-graph
     (lambda (x h)
@@ -283,7 +326,9 @@
         (cond
           [(hashtable-ref h x #f) =>
            (lambda (i) 
-             (hashtable-set! h x (fxadd1 i)))]
+             (if (vector? i)
+                 (vector-set! i 0 (fxadd1 (vector-ref i 0)))
+                 (hashtable-set! h x (fxadd1 i))))]
           [else
            (hashtable-set! h x 0)
            (cond
@@ -302,24 +347,40 @@
              [(code? x) 
               (make-graph ($code-annotation x) h)
               (make-graph (code-reloc-vector x) h)]
+             [(hashtable? x) 
+              (when (hashtable-hash-function x) 
+                (die 'fasl-write "not fasl-writable" x))
+              (let-values ([(keys vals) (hashtable-entries x)])
+                (make-graph keys h)
+                (make-graph vals h)
+                (hashtable-set! h x (vector 0 keys vals)))]
              [(struct? x)
-              (when (eq? x (base-rtd))
-                (die 'fasl-write "base-rtd is not writable"))
-              (let ([rtd (struct-type-descriptor x)])
-                (cond
-                  [(eq? rtd (base-rtd))
-                   ;;; this is an rtd
-                   (make-graph (struct-type-name x) h)
-                   (make-graph (struct-type-symbol x) h)
-                   (for-each (lambda (x) (make-graph x h))
-                     (struct-type-field-names x))]
-                  [else
-                   ;;; this is a record
-                   (make-graph rtd h)
-                   (for-each 
-                     (lambda (name) 
-                       (make-graph ((struct-field-accessor rtd name) x) h))
-                     (struct-type-field-names rtd))]))]
+              (cond
+                [(eq? x (base-rtd))
+                 (die 'fasl-write "base-rtd is not writable")]
+                [(record-type-descriptor? x) 
+                 (make-graph (record-type-name x) h)
+                 (make-graph (record-type-parent x) h)
+                 (make-graph (record-type-uid x) h)
+                 (vector-for-each 
+                   (lambda (x) (make-graph x h))
+                   (record-type-field-names x))]
+                [else
+                 (let ([rtd (struct-type-descriptor x)])
+                   (cond
+                     [(eq? rtd (base-rtd))
+                      ;;; this is a struct rtd
+                      (make-graph (struct-type-name x) h)
+                      (make-graph (struct-type-symbol x) h)
+                      (for-each (lambda (x) (make-graph x h))
+                        (struct-type-field-names x))]
+                     [else
+                      ;;; this is a struct
+                      (make-graph rtd h)
+                      (let f ([i 0] [n (struct-length x)])
+                        (unless (= i n) 
+                          (make-graph (struct-ref x i) h)
+                          (f (+ i 1) n)))]))])]
              [(procedure? x)
               (let ([code ($closure-code x)])
                 (unless (fxzero? (code-freevars code))
@@ -334,6 +395,9 @@
              [(ratnum? x) 
               (make-graph (numerator x) h)
               (make-graph (denominator x) h)]
+             [(or (compnum? x) (cflonum? x))
+              (make-graph (real-part x) h)
+              (make-graph (imag-part x) h)]
              [else (die 'fasl-write "not fasl-writable" x)])]))))
   (define fasl-write-to-port
     (lambda (x port)
@@ -349,7 +413,10 @@
          (void))))
   (define fasl-write
     (case-lambda 
-      [(x port)
-       (unless (and (output-port? port) (binary-port? port))
-         (die 'fasl-write "not an output port" port))
-       (fasl-write-to-port x port)])))
+      [(x p)
+       (cond
+         [(not (output-port? p)) 
+          (die 'fasl-write "not an output port" p)]
+         [(not (binary-port? p))
+          (die 'fasl-write "not a binary port" p)]
+         [else (fasl-write-to-port x p)])])))

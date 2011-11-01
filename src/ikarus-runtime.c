@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <limits.h>
 #include <fcntl.h>
 #include <string.h>
 #include <strings.h>
@@ -32,10 +33,14 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <sys/param.h>
+#include <dirent.h>
 #ifdef __CYGWIN__
 #include "ikarus-winmmap.h"
 #endif
 
+
+extern ikptr ik_errno_to_code();
 
 int total_allocated_pages = 0;
          
@@ -46,19 +51,19 @@ extern char **environ;
 #define segment_shift (pageshift+pageshift-2)
 #define segment_index(x) (((unsigned long int)(x)) >> segment_shift)
 
-ikptr ik_mmap(int size);
-void ik_munmap(ikptr mem, int size);
+ikptr ik_mmap(unsigned long int size);
+void ik_munmap(ikptr mem, unsigned long int size);
 
 static void
-extend_table_maybe(ikptr p, int size, ikpcb* pcb){
+extend_table_maybe(ikptr p, unsigned long int size, ikpcb* pcb){
   assert(size == align_to_next_page(size));
   ikptr q = p + size;
   if(p < pcb->memory_base){
-    long int new_lo = segment_index(p);
-    long int old_lo = segment_index(pcb->memory_base);
-    long int hi = segment_index(pcb->memory_end);
-    long int new_vec_size = (hi - new_lo) * pagesize;
-    long int old_vec_size = (hi - old_lo) * pagesize;
+    unsigned long int new_lo = segment_index(p);
+    unsigned long int old_lo = segment_index(pcb->memory_base);
+    unsigned long int hi = segment_index(pcb->memory_end);
+    unsigned long int new_vec_size = (hi - new_lo) * pagesize;
+    unsigned long int old_vec_size = (hi - old_lo) * pagesize;
     ikptr v = ik_mmap(new_vec_size);
     bzero((char*)(long)v, new_vec_size - old_vec_size);
     memcpy((char*)(long)(v+new_vec_size-old_vec_size),
@@ -77,12 +82,12 @@ extend_table_maybe(ikptr p, int size, ikpcb* pcb){
     pcb->segment_vector = (unsigned int*)(long)(s - new_lo * pagesize);
     pcb->memory_base = (new_lo * segment_size);
   } 
-  else if (q > pcb->memory_end){
-    long int lo = segment_index(pcb->memory_base);
-    long int old_hi = segment_index(pcb->memory_end);
-    long int new_hi = segment_index(q+segment_size-1);
-    long int new_vec_size = (new_hi - lo) * pagesize;
-    long int old_vec_size = (old_hi - lo) * pagesize;
+  else if (q >= pcb->memory_end){
+    unsigned long int lo = segment_index(pcb->memory_base);
+    unsigned long int old_hi = segment_index(pcb->memory_end);
+    unsigned long int new_hi = segment_index(q+segment_size-1);
+    unsigned long int new_vec_size = (new_hi - lo) * pagesize;
+    unsigned long int old_vec_size = (old_hi - lo) * pagesize;
     ikptr v = ik_mmap(new_vec_size);
     memcpy((char*)(long)v, 
            (char*)(long)pcb->dirty_vector_base,
@@ -103,7 +108,7 @@ extend_table_maybe(ikptr p, int size, ikpcb* pcb){
 
 
 static void
-set_segment_type(ikptr base, int size, unsigned int type, ikpcb* pcb){
+set_segment_type(ikptr base, unsigned long int size, unsigned int type, ikpcb* pcb){
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == align_to_next_page(size));
@@ -116,7 +121,7 @@ set_segment_type(ikptr base, int size, unsigned int type, ikpcb* pcb){
 }
 
 void
-ik_munmap_from_segment(ikptr base, int size, ikpcb* pcb){
+ik_munmap_from_segment(ikptr base, unsigned long int size, ikpcb* pcb){
   assert(base >= pcb->memory_base);
   assert((base+size) <= pcb->memory_end);
   assert(size == align_to_next_page(size));
@@ -154,7 +159,7 @@ ik_munmap_from_segment(ikptr base, int size, ikpcb* pcb){
 
 
 ikptr
-ik_mmap_typed(int size, unsigned int type, ikpcb* pcb){
+ik_mmap_typed(unsigned long int size, unsigned int type, ikpcb* pcb){
   ikptr p;
   if(size == pagesize) {
     ikpage* s = pcb->cached_pages;
@@ -177,34 +182,27 @@ ik_mmap_typed(int size, unsigned int type, ikpcb* pcb){
 }
 
 ikptr
-ik_mmap_ptr(int size, int gen, ikpcb* pcb){
+ik_mmap_ptr(unsigned long int size, int gen, ikpcb* pcb){
   return ik_mmap_typed(size, pointers_mt | gen, pcb);
 }
 
 ikptr
-ik_mmap_data(int size, int gen, ikpcb* pcb){
+ik_mmap_data(unsigned long int size, int gen, ikpcb* pcb){
   return ik_mmap_typed(size, data_mt | gen, pcb);
 }
 
 ikptr
-ik_mmap_code(int size, int gen, ikpcb* pcb){
+ik_mmap_code(unsigned long int size, int gen, ikpcb* pcb){
   ikptr p = ik_mmap_typed(size, code_mt | gen, pcb);
   if(size > pagesize){
     set_segment_type(p+pagesize, size-pagesize, data_mt|gen, pcb);
   }
-#if 0
-  junk int err = mprotect(p, size, PROT_READ | PROT_WRITE | PROT_EXEC);
-  if(err){
-    fprintf(stderr, "cannot mprotect code: %s\n", strerror(errno));
-    exit(-1);
-  }
-#endif
   return p;
 }
 
 
 ikptr
-ik_mmap_mixed(int size, ikpcb* pcb){
+ik_mmap_mixed(unsigned long int size, ikpcb* pcb){
   return ik_mmap_typed(size, mainheap_mt, pcb);
 }
 
@@ -212,10 +210,10 @@ ik_mmap_mixed(int size, ikpcb* pcb){
 
 
 ikptr
-ik_mmap(int size){
-  int pages = (size + pagesize - 1) / pagesize;
+ik_mmap(unsigned long int size){
+  unsigned long int pages = (size + pagesize - 1) / pagesize;
   total_allocated_pages += pages;
-  int mapsize = pages * pagesize;
+  unsigned long int mapsize = pages * pagesize;
   assert(size == mapsize);
 #ifndef __CYGWIN__
   char* mem = mmap(
@@ -227,7 +225,7 @@ ik_mmap(int size){
       0);
   /* FIXME: check if in range */
   if(mem == MAP_FAILED){
-    fprintf(stderr, "Mapping failed: %s\n", strerror(errno));
+    fprintf(stderr, "Mapping (0x%lx bytes) failed: %s\n", size, strerror(errno));
     exit(-1);
   }
 #else
@@ -235,31 +233,31 @@ ik_mmap(int size){
 #endif
   memset(mem, -1, mapsize);
 #ifndef NDEBUG
-  fprintf(stderr, "MMAP 0x%08x .. 0x%08x\n", (int)mem,
-      ((int)(mem))+mapsize-1);
+  fprintf(stderr, "MMAP 0x%016lx .. 0x%016lx\n", (long int)mem,
+      ((long int)(mem))+mapsize-1);
 #endif
   return (ikptr)(long)mem;
 }
 
 void
-ik_munmap(ikptr mem, int size){
-  int pages = (size + pagesize - 1) / pagesize;
-  int mapsize = pages * pagesize;
+ik_munmap(ikptr mem, unsigned long int size){
+  unsigned long int pages = (size + pagesize - 1) / pagesize;
+  unsigned long int mapsize = pages * pagesize;
   assert(size == mapsize);
   assert(((-pagesize) & (int)mem) == (int)mem);
   total_allocated_pages -= pages;
 #ifndef __CYGWIN__
-  int err = munmap((char*)(long)mem, mapsize);
+  int err = munmap((char*)mem, mapsize);
   if(err != 0){
     fprintf(stderr, "ik_munmap failed: %s\n", strerror(errno));
     exit(-1);
   }
 #else 
-  win_munmap(mem, mapsize);
+  win_munmap((char*)mem, mapsize);
 #endif
 #ifndef NDEBUG
-  fprintf(stderr, "UNMAP 0x%08x .. 0x%08x\n", (int)mem,
-      ((int)(mem))+mapsize-1);
+  fprintf(stderr, "UNMAP 0x%016lx .. 0x%016lx\n", (long int)mem,
+      ((long int)(mem))+mapsize-1);
 #endif
 }
 
@@ -488,7 +486,7 @@ void ik_error(ikptr args){
 
 void ik_stack_overflow(ikpcb* pcb){
 #ifndef NDEBUG
-  fprintf(stderr, "entered ik_stack_overflow pcb=0x%08x\n", (int)pcb);
+  fprintf(stderr, "entered ik_stack_overflow pcb=0x%016lx\n", (long int)pcb);
 #endif
   set_segment_type(pcb->stack_base, pcb->stack_size, data_mt, pcb);
   
@@ -535,13 +533,16 @@ ikptr ik_uuid(ikptr bv){
   if(fd == -1){
     fd = open("/dev/urandom", O_RDONLY);
     if(fd == -1){
-      return false_object;
+      return ik_errno_to_code();
     }
     uuid_strlen = strlen(uuid_chars);
   }
   long int n = unfix(ref(bv, off_bytevector_length));
   unsigned char* data = (unsigned char*)(long)(bv+off_bytevector_data);
-  read(fd, data, n);
+  int r = read(fd, data, n);
+  if(r < 0){
+    return ik_errno_to_code();
+  }
   unsigned char* p = data;
   unsigned char* q = data + n;
   while(p < q){
@@ -552,97 +553,48 @@ ikptr ik_uuid(ikptr bv){
 }
 
 
-
-/*
-     #include <sys/types.h>
-     #include <sys/stat.h>
-     int
-     stat(const char *path, struct stat *sb);
-ERRORS
-     Stat() and lstat() will fail if:
-     [ENOTDIR]          A component of the path prefix is not a directory.
-     [ENAMETOOLONG]     A component of a pathname exceeded {NAME_MAX} charac-
-                        ters, or an entire path name exceeded {PATH_MAX} char-
-                        acters.
-     [ENOENT]           The named file does not exist.
-     [EACCES]           Search permission is denied for a component of the
-                        path prefix.
-     [ELOOP]            Too many symbolic links were encountered in translat-
-                        ing the pathname.
-     [EFAULT]           Sb or name points to an invalid address.
-     [EIO]              An I/O error occurred while reading from or writing to
-                        the file system.
-*/
-ikptr 
-ikrt_file_exists(ikptr filename){
-  char* str;
-  if(tagof(filename) == bytevector_tag){
-    str = (char*)(long)(filename + off_bytevector_data);
-  } else {
-    fprintf(stderr, "bug in ikrt_file_exists\n");
-    exit(-1);
+ikptr
+ikrt_stat(ikptr filename, ikptr follow /*, ikpcb* pcb */){
+  char* fn = (char*)(filename + off_bytevector_data);
+  struct stat s;
+  int r;
+  if(follow == false_object){
+    r = lstat(fn, &s);
+  } else{
+    r = stat(fn, &s);
   }
-  struct stat sb;
-  int st = stat(str, &sb);
-  if(st == 0){
-    /* success */
-    return true_object;
-  } else {
-    int err = errno;
-    if(err == ENOENT){
-      return false_object;
-    } 
-    else if(err == ENOTDIR){
+  if(r == 0){
+    if(S_ISREG(s.st_mode)){
       return fix(1);
     } 
-    else if(err == ENAMETOOLONG){
+    else if(S_ISDIR(s.st_mode)){
       return fix(2);
-    } 
-    else if(err == EACCES){
-      return fix(3);
-    } 
-    else if(err == ELOOP){
-      return fix(4);
-    } 
-    else if(err == EFAULT){
-      return fix(5);
-    } 
-    else if(err == EIO){
-      return fix(6);
-    } 
-    else {
-      return fix(-1);
     }
-  }
+    else if(S_ISLNK(s.st_mode)){
+      return fix(3);
+    }
+    else {
+      return fix(0);
+    }
+  }  
+  return ik_errno_to_code();
 }
 
 
-/*
-     [ENOTDIR]          A component of the path prefix is not a directory.
-     [ENAMETOOLONG]     A component of a pathname exceeded {NAME_MAX} charac-
-                        ters, or an entire path name exceeded {PATH_MAX} char-
-                        acters.
-     [ENOENT]           The named file does not exist.
-     [EACCES]           Search permission is denied for a component of the
-                        path prefix.
-     [EACCES]           Write permission is denied on the directory containing
-                        the link to be removed.
-     [ELOOP]            Too many symbolic links were encountered in translat-
-                        ing the pathname.
-     [EPERM]            The named file is a directory and the effective user
-                        ID of the process is not the super-user.
-     [EPERM]            The directory containing the file is marked sticky,
-                        and neither the containing directory nor the file to
-                        be removed are owned by the effective user ID.
-     [EBUSY]            The entry to be unlinked is the mount point for a
-                        mounted file system.
-     [EIO]              An I/O error occurred while deleting the directory
-                        entry or deallocating the inode.
-     [EROFS]            The named file resides on a read-only file system.
-     [EFAULT]           Path points outside the process's allocated address
-                        space.
-*/
-
+/* ikrt_file_exists needs to be removed.
+   This is here only to be able to use old ikarus.boot.prebuilt */
+ikptr
+ikrt_file_exists(ikptr filename /*, ikpcb* pcb */){
+  switch (ikrt_stat(filename, true_object /*, pcb */)){
+    case fix(0):
+    case fix(1):
+    case fix(2):
+    case fix(3):
+      return true_object;
+    default:
+      return false_object;
+  }
+}
 
 ikptr
 ikrt_delete_file(ikptr filename){
@@ -655,30 +607,111 @@ ikrt_delete_file(ikptr filename){
   }
   int err = unlink(str);
   if(err == 0){
-    return 0;
+    return true_object;
   } 
-  switch (err){
-    case ENOTDIR:  return fix(1);    
-    case ENAMETOOLONG: return fix(2);
-    case ENOENT: return fix(3);     
-    case EACCES: return fix(4);     
-    case ELOOP: return fix(5);      
-    case EPERM: return fix(6);      
-    case EBUSY: return fix(7);      
-    case EIO: return fix(8);        
-    case EROFS: return fix(9);      
-    case EFAULT: return fix(10);     
-  }
-  return fix(-1);
+  return ik_errno_to_code();
 }
 
+ikptr
+ikrt_directory_list(ikptr filename, ikpcb* pcb){
+  DIR* dir;
+  struct dirent* de;
+  if((dir = opendir((char*)(filename + off_bytevector_data))) == NULL){
+    return ik_errno_to_code();
+  }
+  ikptr ac = null_object;
+  pcb->root0 = &ac;
+  while(1){
+    errno = 0;
+    de = readdir(dir);
+    if(de == NULL){
+      pcb->root0 = 0;
+      ikptr retval = (errno ? ik_errno_to_code() : ac);
+      closedir(dir);
+      return retval;
+    }
+    int len = strlen(de->d_name);
+    ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1))
+               + bytevector_tag;
+    ref(bv, off_bytevector_length) = fix(len);
+    memcpy((char*)(bv+off_bytevector_data), de->d_name, len+1);
+    pcb->root1 = &bv;
+    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    pcb->root1 = 0;
+    ref(p, off_car) = bv;
+    ref(p, off_cdr) = ac;
+    ac = p;
+  }
+}
 
+ikptr
+ikrt_mkdir(ikptr path, ikptr mode /*, ikpcb* pcb */){
+  int r = mkdir((char*)(path+off_bytevector_data), unfix(mode));
+  if(r == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
 
+ikptr
+ikrt_rmdir(ikptr path /*, ikpcb* pcb */){
+  int r = rmdir((char*)(path+off_bytevector_data));
+  if(r == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
+
+ikptr
+ikrt_chmod(ikptr path, ikptr mode /*, ikpcb* pcb */){
+  int r = chmod((char*)(path+off_bytevector_data), (mode_t)unfix(mode));
+  if(r == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
+
+ikptr
+ikrt_symlink(ikptr to, ikptr path /*, ikpcb* pcb */){
+  int r = symlink((char*)(to+off_bytevector_data), (char*)(path+off_bytevector_data));
+  if(r == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
+
+ikptr
+ikrt_link(ikptr to, ikptr path /*, ikpcb* pcb */){
+  int r = link((char*)(to+off_bytevector_data), (char*)(path+off_bytevector_data));
+  if(r == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
+
+ikptr
+ikrt_realpath(ikptr bv, ikpcb* pcb){
+  char buff[PATH_MAX];
+  char* p = realpath((char*)(bv+off_bytevector_data), buff);
+  if(p == NULL){
+    return ik_errno_to_code();
+  }
+  int n = strlen(p);
+  ikptr r = ik_safe_alloc(pcb, align(disp_bytevector_data+n+1));
+  ref(r, 0) = fix(n);
+  memcpy((char*)(r+disp_bytevector_data), p, n+1);
+  return r+bytevector_tag;
+}
 
 ikptr 
 ik_system(ikptr str){
   if(tagof(str) == bytevector_tag){
-    return fix(system((char*)(long)(str+off_bytevector_data)));
+    int r = system((char*)(long)(str+off_bytevector_data));
+    if(r >= 0) {  
+      return fix(r);
+    } else {
+      return ik_errno_to_code();
+    }
   } else {
     fprintf(stderr, "bug in ik_system\n");
     exit(-1);
@@ -690,7 +723,7 @@ mtname(unsigned int n){
   if(n == mainheap_type)  { return "HEAP_T"; }
   if(n == mainstack_type) { return "STAK_T"; }
   if(n == pointers_type)  { return "PTER_T"; }
-  if(n == dat_type)      { return "DATA_T"; }
+  if(n == dat_type)       { return "DATA_T"; }
   if(n == code_type)      { return "CODE_T"; }
   if(n == hole_type)      { return "      "; }
   return "WHAT_T";
@@ -816,9 +849,6 @@ ikrt_register_guardian(ikptr tc, ikptr obj, ikpcb* pcb){
   return ikrt_register_guardian_pair(p0, pcb);
 }
 
-
-
-
 ikptr 
 ikrt_stats_now(ikptr t, ikpcb* pcb){
   struct rusage r;
@@ -880,7 +910,11 @@ ikrt_gmt_offset(ikptr t){
 ikptr 
 ikrt_fork(){
   int pid = fork();
-  return fix(pid);
+  if(pid >= 0){
+    return fix(pid);
+  } else {
+    return ik_errno_to_code();
+  }
 }
 
 
@@ -897,11 +931,7 @@ ikrt_getenv(ikptr bv, ikpcb* pcb){
     return s;
   } 
   else {
-    ikptr s = ik_safe_alloc(pcb, align(disp_bytevector_data+1)) 
-          + bytevector_tag;
-    ref(s, -bytevector_tag) = fix(0);
-    ref(s, off_bytevector_data) = 0;
-    return s;
+    return false_object;
   }
 }
 
@@ -937,10 +967,8 @@ ikrt_make_vector2(ikptr len, ikptr obj, ikpcb* pcb){
 
 ikptr 
 ikrt_setenv(ikptr key, ikptr val, ikptr overwrite){
-  fprintf(stderr, "setenv busted!\n");
-  exit(-1);
-  int err = setenv((char*)(long)(key+off_bytevector_data), 
-                   (char*)(long)(val+off_bytevector_data),
+  int err = setenv((char*)(key+off_bytevector_data), 
+                   (char*)(val+off_bytevector_data),
                    overwrite!=false_object);
   if(err){
     return false_object;
@@ -949,24 +977,34 @@ ikrt_setenv(ikptr key, ikptr val, ikptr overwrite){
   }
 }
 
+ikptr 
+ikrt_unsetenv(ikptr key){
+  unsetenv((char*)(key+off_bytevector_data));
+  return void_object;
+}
+
+
 
 ikptr 
 ikrt_environ(ikpcb* pcb){
-  fprintf(stderr, "environ busted!\n");
-  exit(-1);
   char** es = environ;
   int i; char* e;
   ikptr ac = null_object;
+  pcb->root0 = &ac;
   for(i=0; (e=es[i]); i++){
     long int n = strlen(e);
-    ikptr s = ik_unsafe_alloc(pcb, align(n+disp_string_data+1)) + string_tag;
-    ref(s, -string_tag) = fix(n);
-    memcpy((char*)(long)(s+off_string_data), e, n+1);
-    ikptr p = ik_unsafe_alloc(pcb, pair_size) + pair_tag;
+    ikptr s = ik_safe_alloc(pcb, align(n+disp_bytevector_data+1))
+      + bytevector_tag;
+    ref(s, -bytevector_tag) = fix(n);
+    memcpy((char*)(long)(s+off_bytevector_data), e, n+1);
+    pcb->root1 = &s;
+    ikptr p = ik_safe_alloc(pcb, pair_size) + pair_tag;
+    pcb->root1 = 0;
     ref(p, off_cdr) = ac;
     ref(p, off_car) = s;
     ac = p;
   }
+  pcb->root0 = 0;
   return ac;
 }
 
@@ -982,7 +1020,110 @@ ikrt_exit(ikptr status, ikpcb* pcb){
 }
 
 ikptr
+ikrt_nanosleep(ikptr secs, ikptr nsecs /*, ikpcb* pcb */){
+  struct timespec t;
+  t.tv_sec = 
+    is_fixnum(secs) 
+      ? (unsigned long) unfix(secs) 
+      : ref(secs, off_bignum_data);
+  t.tv_nsec = 
+    is_fixnum(nsecs) 
+      ? (unsigned long) unfix(nsecs)
+      : ref(nsecs, off_bignum_data);
+  return fix(nanosleep(&t, NULL));
+}
+
+ikptr
+ikrt_chdir(ikptr pathbv /*, ikpcb* pcb */){
+  int err = chdir(off_bytevector_data+(char*)pathbv);
+  if(err == 0){
+    return true_object;
+  }
+  return ik_errno_to_code();
+}
+
+ikptr
+ikrt_getcwd(ikpcb* pcb){
+  char buff[MAXPATHLEN+1];
+  char* path = getcwd(buff, MAXPATHLEN);
+  if(! path){
+    return ik_errno_to_code();
+  }
+  int len = strlen(path);
+  ikptr bv = ik_safe_alloc(pcb, align(disp_bytevector_data+len+1));
+  ref(bv,0) = fix(len);
+  memcpy(disp_bytevector_data+(char*)(bv), path, len+1);
+  return bv+bytevector_tag;
+}
+
+
+
+ikptr
 ikrt_debug(ikptr x){
   fprintf(stderr, "DEBUG 0x%016lx\n", (long int)x);
   return 0;
-};
+}
+
+ikptr
+ikrt_access(ikptr filename, ikptr how /*, ikpcb* pcb */){
+  char* fn = (char*)(filename + off_bytevector_data);
+  int r;
+  int ik_how;
+  int c_how;
+
+  ik_how = unfix(how);
+  if (ik_how == 0) {
+    c_how = F_OK;
+  } else {
+    c_how = 0;
+    if (ik_how & 1) c_how |= R_OK;
+    if (ik_how & 2) c_how |= W_OK;
+    if (ik_how & 4) c_how |= X_OK;
+  }
+  
+  r = access(fn, c_how);
+  if (r == 0) {
+    return true_object;
+  } else if ((errno == EACCES) ||
+             (errno == EROFS) ||
+             (errno == ETXTBSY)) {
+    return false_object;
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr
+ikrt_file_size(ikptr filename, ikpcb* pcb){
+  char* fn = (char*)(filename + off_bytevector_data);
+  struct stat s;
+  int r = stat(fn, &s);
+  if (r == 0) {
+    if (sizeof(off_t) == sizeof(long)) {
+      return u_to_number(s.st_size, pcb);
+    } else if (sizeof(off_t) == sizeof(long long)) {
+      return ull_to_number(s.st_size, pcb);
+    } else {
+      fprintf(stderr, "internal error in ikarus: invalid off_t size\n");
+      exit(-1);
+    }
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr
+ikrt_rename_file(ikptr src, ikptr dst /* ikpcb* pcb */){
+  int err = rename((char*)(src + off_bytevector_data),
+                   (char*)(dst + off_bytevector_data));
+  if (err == 0) {
+    return true_object;
+  } else {
+    return ik_errno_to_code();
+  }
+}
+
+ikptr 
+ikrt_last_errno(ikpcb* pcb){
+  return s_to_number(pcb->last_errno, pcb);
+}

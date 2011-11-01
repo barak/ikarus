@@ -138,7 +138,7 @@
   \noindent Ikarus Scheme\\ User's Guide\\ }
   \noindent \rule{\textwidth}{6pt}
 {\fontsize{18}{18} \fstpagefont{}
-  \hfill{} (Preliminary Document) \hfill Version~0.0.3 }
+   \mbox{} \hfill Version~0.0.4 }
 \vfill
 { \fontsize{24}{24} \fstpagefont{}
   \hfill{} Abdulaziz Ghuloum}
@@ -151,8 +151,8 @@
 \vfill{}
 %\addcontentsline{toc}{section}{Copyrights}
 \noindent
-Ikarus Scheme User's Guide\\
-Copyright \copyright{} 2007,2008,  Abdulaziz Ghuloum\\
+Ikarus Scheme User's Guide \hfill{} (Version 0.0.4)\\
+Copyright \copyright{} 2007,2008  Abdulaziz Ghuloum\\
 
 {\small
 \noindent
@@ -203,23 +203,38 @@ of the features found in the current standard, the
 Revised$^\mathrm{6}$ report on the algorithmic language
 Scheme\cite{r6rs} including full \rnrs{6} library and script syntax,
 syntax-case, unicode strings, bytevectors, user-defined record
-types, exception handling, conditions, and enumerations.  More than
-94\% of the \rnrs{6} procedures and keywords are currently
-implemented and subsequent releases will proceed towards brining
-Ikarus to full \rnrs{6} conformance.
+types, exception handling, conditions, and enumerations.
+User-define \rnrs{6} libraries can be compiled in-memory on the fly
+or compiled to disk and loaded in subsequent runs.
 
-The main purpose behind releasing Ikarus early is to give Scheme
-programmers the opportunity to experiment with the various new
-features that were newly introduced in \rnrs{6}.  The most important
-of such features is the ability to structure large programs into
-libraries; where each library extends the language through
-procedural and syntactic abstractions.  Many useful libraries can be
-written using the currently supported set of \rnrs{6} features
-including text processing tools, symbolic logic systems,
-interpreters and compilers, and many mathematical and scientific
-packages.  It is my hope that this release will encourage the
-Scheme community to write and to share their most useful \rnrs{6}
-libraries.
+In addition to supporting \rnrs{6} (and most of the features found
+in the the previous \rnrs{n} standards), Ikarus supports powerful
+interprocess communication facilities including support for
+communication with child processes via pipes and with remote
+processes via TCP and UDP sockets.  The facility also allows for
+both synchronous and asynchronous communication so that a Scheme
+program running in Ikarus can communicate with many processes
+concurrently.
+
+Ikarus also supports basic foreign function interface (FFI)
+facilities.  This allows the programmer to define accessors and
+mutators for native data structures.  It also allows for Scheme
+programs to dynamically load any library found on the host machine.
+Native procedures and Scheme procedures can call to each other by
+the call-out and call-back facilities of Ikarus.
+
+%The main purpose behind releasing Ikarus early is to give Scheme
+%programmers the opportunity to experiment with the various new
+%features that were newly introduced in \rnrs{6}.  The most important
+%of such features is the ability to structure large programs into
+%libraries; where each library extends the language through
+%procedural and syntactic abstractions.  Many useful libraries can be
+%written using the currently supported set of \rnrs{6} features
+%including text processing tools, symbolic logic systems,
+%interpreters and compilers, and many mathematical and scientific
+%packages.  It is my hope that this release will encourage the
+%Scheme community to write and to share their most useful \rnrs{6}
+%libraries.
 
 
 \newpage
@@ -248,6 +263,14 @@ the runtime system to expand its memory footprint as needed.  The
 entire 32-bit virtual address space could be used and unneeded
 memory is released back to the operating system.
 
+\textbf{32-bit and 64-bit computing:} Ikarus supports both the
+Intel-x86 and the AMD-64 architectures.  64-bit computing allows the
+programmer to utilize larger address space (larger than 4GB) and
+provides a greater range for fixnums (61-bit fixnums).  Running in
+32-bit mode, however, makes more efficient utilization of resources
+due to the smaller memory footprint for most data structures.\\
+(64-bit support is experimental at this stage of development.)
+
 \textbf{Supports many operating systems:} Ikarus runs on the most
 popular and widely used operating systems for servers and personal
 computers.  The supported systems include Mac~OS~X,
@@ -256,13 +279,17 @@ GNU/Linux, FreeBSD, NetBSD, and Microsoft Windows.
 
 \section{System requirements}
 
+This section provides an overview of the hardware and software
+requirements needed for running Ikarus.
+
 \subsection{Hardware}
 
-Ikarus Scheme runs on the IA-32 (\emph{x86}) architecture
-supporting SSE2 extensions.  This includes the Athlon 64,
-Sempron 64, and Turion 64 processors from AMD and the Pentium 4, Xeon,
-Celeron, Pentium M, Core, and Core2 processors from Intel.  The
-system does not run on Intel Pentium III or earlier
+Ikarus Scheme runs in 32-bit mode on the IA-32 (\emph{x86})
+architecture supporting SSE2 extensions.  It also runs in 64-bit
+mode on platforms supporing the AMD-64 architecture.  This includes
+the Athlon 64, Sempron 64, and Turion 64 processors from AMD and the
+Pentium 4, Xeon, Celeron, Pentium M, Core, and Core2 processors from
+Intel.  Ikarus does not run on Intel Pentium III or earlier
 processors.
 
 The Ikarus compiler generates SSE2 instructions to handle Scheme's
@@ -292,10 +319,21 @@ available for most operating systems.  Alternatively, GMP can be
 downloaded from \\
 \url{http://gmplib.org/}.
 
-\BoxedText{Note:}{Ikarus runs in 32-bit mode only.  
-To run it in 64-bit environments, you will have to obtain the 32-bit
-version of GMP, or compile it yourself after adding \texttt{ABI=32}
-to its configuration options.}
+
+\item\textbf{FFI:} 
+ The \texttt{libffi} library (version \texttt{3.0.6}) can be utilized 
+to enable Scheme procedures to call and be called from native
+procedure (see Chapter~\ref{chapter:foreign} for details).  
+To enable
+\texttt{libffi} while building Ikarus, one must pass
+\texttt{--enable-libffi} to the \texttt{configure} script along with
+the paths to \texttt{libffi}'s include and lib directory.
+The \texttt{libffi} library can be obtained from
+\url{http://sourceware.org/libffi/}.
+FFI support is optional.  It is not required if all one needs is
+writing pure Scheme code.
+
+
 
 
 \item\textbf{GCC:} The GNU C Compiler is required to build the Ikarus
@@ -397,6 +435,20 @@ two paths in the \texttt{CFLAGS} and \texttt{LDFLAGS} arguments:
   $ ./configure CFLAGS=-I/path/to/include LDFLAGS=-L/path/to/lib
 \end{verbatim}
 
+
+If you wish to enable support for accessing and calling to/from
+foreign libraries, you need to configure Ikarus with the
+\texttt{--enable-libffi} option and supply the approriate
+\texttt{CFLAGS} and \texttt{LDFLAGS} as needed.
+
+\begin{verbatim}
+  $ ./configure --enable-libffi \
+       [CFLAGS=/path/to/ffi.h] \
+       [LDFLAGS=/path/to/libffi.so|.dylib|.dll]
+\end{verbatim}
+
+
+
 \item Build the system by running:
 \begin{verbatim}
   $ make
@@ -420,7 +472,7 @@ need to have administrator privileges (use the \texttt{sudo} or
 \item Test that Ikarus runs from the command line.
 \begin{verbatim}
   $ ikarus
-  Ikarus Scheme version 0.0.3
+  Ikarus Scheme version 0.0.4
   Copyright (c) 2006-2008 Abdulaziz Ghuloum
 
   > 
@@ -474,15 +526,17 @@ The rest of the command-line arguments are recognized by the
 standard Scheme run time system.   They are processed after the
 boot file is loaded.
 
-\item \texttt{ikarus --r6rs-script script-file-name [arguments ...]}
+\item \texttt{ikarus files ... --r6rs-script script-file arguments ...}
 
-\index{R6RS Script@\rnrs{6} Script} The \texttt{--r6rs-script} argument
-instructs Ikarus that the supplied file is an \rnrs{6} script.  See
-Section~\ref{sec:scripts} for a short introduction to writing \rnrs{6}
-scripts.  The script file name and any additional optional
-\texttt{arguments}
-can be obtained by calling the
-\idxtt{command-line} procedure.
+\index{R6RS Script@\rnrs{6} Script} The \texttt{--r6rs-script}
+argument instructs Ikarus that the supplied file is an \rnrs{6}
+script.  The optional list of \texttt{files} must be paths to files,
+each containing a set of libraries that Ikarus must load,
+sequentially, before running the \rnrs{6} script
+\texttt{script-file}.  See Section~\ref{sec:scripts} for a short
+introduction to writing \rnrs{6} scripts.  The script file name and
+any additional optional \texttt{arguments} can be obtained by
+calling the \idxtt{command-line} procedure.
 
 \begin{verbatim}
   $ cat test.ss 
@@ -512,10 +566,7 @@ string \texttt{"*interactive*"}, corresponding to the script name in
 \BoxedText{Note:}{The interactive mode is intended for quickly
 experimenting with the built-in features.  It is intended neither
 for developing applications nor for writing any substantial pieces
-of code.  The main reason for this is that the interaction between
-\rnrs{6} libraries and the interactive environment is not well
-understood.  We hope to achieve better interaction between the two
-subsystems in the future.}
+of code.}
 
 \end{itemize}
 
@@ -561,7 +612,6 @@ by double-clicking on it.  This brings up a terminal window in which
 the script is executed.  The \texttt{.command} extension can be
 hidden from the \emph{Get Info} item from the Finder's File menu.}
 
-\newpage
 
 \section{Mapping library names to file names}
 
@@ -574,7 +624,7 @@ library or a script.  The same holds for the \texttt{(ikarus)}
 library (chapter~\ref{chapter:ikarus},
 page~\pageref{chapter:ikarus}).
 
-When writing a new library to a file, Ikarus uses a simple mechanism
+When importing a user library, Ikarus uses a simple mechanism
 to map library names to file names.  A library name is converted to
 a file path by joining the library identifiers with a path
 separator, e.g. \verb|"/"|.
@@ -593,18 +643,19 @@ separator, e.g. \verb|"/"|.
 Having mapped a library name to a file path, Ikarus attempts to
 locate that file in one of several locations.  The locations
 attempted depend on two settings: the search path and the file
-prefix set (e.g., \verb|.sls|, \verb|.ss|, \verb|.scm|, etc.).
+extension set (e.g., \verb|.sls|, \verb|.ss|, \verb|.scm|, etc.).
 First, Ikarus attempts to locate the file in the current working
 directory from which Ikarus was invoked.  In the current working
-directory, Ikarus enumerates all file prefixes first before
+directory, Ikarus enumerates all file extensions first before
 searching other locations.  If the file is not found in the current
 directory, Ikarus tries to find it in the Ikarus library directory.
 The Ikarus library directory is determined when Ikarus is installed
 (based on the \texttt{--prefix} argument that was passed to the
 \texttt{configure} script).  If Ikarus failes to locate the library
-file, it raises an exception and exits.  See
-Chapter~\ref{chapter:contributed} for more details about the library
-locations.
+file, it raises an exception and exits. 
+%See
+%Chapter~\ref{chapter:contributed} for more details about the library
+%locations.
 
 
 \BoxedText{Tip:}{Use simple library names for the libraries that
@@ -616,14 +667,18 @@ the library file to a place where Ikarus can find it.}
 
 \section{Writing cross-implementation libraries}
 
-When searching for a library, Ikarus appends a prefix (e.g.,
+When searching for a library, Ikarus appends an extension (e.g.,
 \verb|.ss|) to the appropriate file name (e.g., \verb|foo/bar|).
-The initial set of file extensions are: \verb|.ikarus.sls|,
+The initial set of file extensions are: \\
+\verb|/main.ikarus.sls|,
+\verb|/main.ikarus.ss|, \verb|/main.ikarus.scm|,
+\verb|/main.sls|, \verb|/main.ss|, \verb|/main.scm|,
+\verb|.ikarus.sls|,
 \verb|.ikarus.ss|, \verb|.ikarus.scm|,
 \verb|.sls|, \verb|.ss|, and \verb|.scm|.
 
 The list of file extensions are searched sequentially.  As a
-consequence, files ending with the \verb|.ikarus.*| prefixes are
+consequence, files ending with the \verb|.ikarus.*| extensions are
 given precedence over files that have generic Scheme extensions.
 The rationale for this behavior is to facilitate writing
 cross-implementation libraries: ones that take advantage of
@@ -633,7 +688,7 @@ implementations.
 
 Consider for example a program which would like to use the
 \verb|pretty-print| procedure to format some code, and suppose
-furthr that pretty printing is just a nice add-on (e.g., using
+further that pretty printing is just a nice add-on (e.g., using
 \verb|write| suffices, but pretty-printing is \emph{just prettier})
 Ikarus exports a good pretty-printing facility in its
 \verb|(ikarus)| library.  However, since \verb|pretty-print| is not
@@ -659,6 +714,85 @@ portable for other implementations.
     (write x port)
     (newline port)))
 \end{CodeInline}
+
+The \verb|/main.*| extensions serve a different purpose.  Often
+times, a set of libraries are distributed together as a package and
+it is convenient for the programmer to group related files in
+directories.  If a package contains the libraries \verb|(foo)|,
+\verb|(foo core)|, and \verb|(foo compat)|, then putting all such
+library files together in one directory makes it easier to
+package, install, and remove these libraries en masse.  The layout
+of the package would look like:
+
+\DefineVerbatimEnvironment{Code}{Verbatim} 
+ {%baselinestretch=1.1,
+  %frame=single,
+  %framerule=0.5pt,
+  commandchars=\\\{\}}
+
+\begin{Code}
+  foo/README              :              {\textrm{ignored by Ikarus}}
+  foo/COPYING             :
+  foo/main.ss             : (foo)        {\textrm{implementation independent}}
+  foo/core.ss             : (foo core) 
+  foo/compat.ss           : (foo compat) {\textrm{default \rnrs{6} library}}
+  foo/compat.ikarus.ss    :              {\textrm{specific for Ikarus}}
+  foo/compat.mzscheme.ss  :              {\textrm{specific for MzScheme}}
+\end{Code}
+
+
+By default, running the \texttt{configure} script
+installs a set of contributed libraries into the
+\verb|/usr/local/lib/ikarus| directory.  If a \verb|--prefix DIR|
+argument was supplied to \texttt{configure}, then the libraries are
+installed in the \verb|DIR/ikarus/lib| directory.  
+
+You may install additional libraries into the Ikarus library
+directory.  Doing so makes them available for \texttt{import} into
+other libraries and script regardless of where the importing code is
+located or the current directory in which it is executed.  
+
+\section{Defining \texttt{IKARUS\_LIBRARY\_PATH}}
+\index{ikarus library path@\texttt{IKARUS\_LIBRARY\_PATH}}
+
+There may be situations in which you may wish to install your own
+libraries into a different location.  For example, you may not have
+sufficient administrative privileges to write to the system
+directory, or you may wish to keep your own libraries separate from
+the standard libraries.  Whatever the reason is, your can store your
+library files in any location you want and set up the
+\verb|IKARUS_LIBRARY_PATH| environment variable to point to these
+locations.  The value of \verb|IKARUS_LIBRARY_PATH| is a
+colon-separated list of directories in which Ikarus will search.
+
+For example, suppose your script imports the
+\texttt{(streams~derived)} library.  First, Ikarus will map the
+library name to the file path \verb|streams/derived.ss|.  Suppose
+that Ikarus was installed using the \verb|--prefix /usr/local|
+configuration option, and suppose further that the value of
+\verb|IKARUS_LIBRARY_PATH| is set by the user to be 
+\verb|/home/john/ikarus-libraries:/home/john/srfis|.  Ikarus will
+search in the following locations in sequence until it finds the
+file it is looking for.
+
+\begin{verbatim}
+   ./streams/derived.ss
+   /home/john/ikarus-libraries/streams/derived.ss
+   /home/john/srfis/streams/derived.ss
+   /usr/local/lib/ikarus/streams/derived.ss
+\end{verbatim}
+
+
+The method in which the value of \verb|IKARUS_LIBRARY_PATH| is
+defined is typically shell dependant.  If you use GNU Bash, you
+typically set the values of environment variables in the
+\verb|~/.bash_profile| or \verb|~/.bashrc| file by adding the
+following lines:
+
+\begin{verbatim}
+   IKARUS_LIBRARY_PATH=/path/to/some/directory:/and/another
+   export IKARUS_LIBRARY_PATH
+\end{verbatim}
 
 
 \chapter{\rnrs{6} Crash Course}
@@ -1139,7 +1273,7 @@ useful features.  The \texttt{(ikarus)} library is a composite
 library---it exports a superset of all the supported bindings of
 \rnrs{6}.  While not all of the exports of \texttt{(ikarus)} are
 documented at this time, this chapter attempts to describe a few of
-these useful extensions.  Extansions to Scheme's lexical syntax are
+these useful extensions.  Extensions to Scheme's lexical syntax are
 also documented.
 
 \idxlabeldefun{\#"!ikarus}{\#"!ikarus}{shebang-ikarus}{\#!ikarus}{reader syntax}
@@ -2065,7 +2199,7 @@ displayed.
        no collections
        0 ms elapsed cpu time, including 0 ms collecting
        0 ms elapsed real time, including 0 ms collecting
-       56 bytes allocated
+       24 bytes allocated
    1
    2
    3
@@ -2075,356 +2209,1092 @@ displayed.
        no collections
        0 ms elapsed cpu time, including 0 ms collecting
        0 ms elapsed real time, including 0 ms collecting
-       32 bytes allocated
+       0 bytes allocated
    12
 \end{verbatim}
 
-\chapter{\label{chapter:contributed}Contributed Libraries}
+\chapter{The \texttt{(ikarus ipc)} library}
 
-We try to keep Ikarus Scheme small and its complexity manageable.
-Libraries that are not an essential part of Ikarus are not included
-in the Ikarus proper, instead, they are distributed with Ikarus in
-source form.  Such libraries may be written specifically
-for Ikarus, or they may be portable libraries that can be used in
-Ikarus.   SRFIs or other libraries contributed by members of the
-Scheme community belong to this section.
-
-Using contributed libraries is no different from using any of the
-built-in libraries---all one has to do is add the library name to
-the \texttt{import} clause and the rest is done by the system.
-
-If you have written a useful \rnrs{6} library and wish for it to be
-available for a wider audience, contact us and we would be delighted
-to include information about it in the next release of Ikarus.
-% High
-% quality SRFIs with \rnrs{6} reference implementations will be
-% distributed with Ikarus as they become available.
-
-\BoxedText{Note:}{Contributed libraries may have bugs on their own
-or may exhibit bugs in Ikarus itself.  If you have a problem using
-any of these libraries, please try to resolve the issue by
-contacting the library author first.  Do not hesitate to file a bug
-on Ikarus if you believe that Ikarus is at fault.}
+\ref{sec:environment-variables}
+\ref{sec:subprocess}
+\ref{sec:sockets}
 
 \newpage
-\section*{Library files}
 
-The contributed libraries are installed in your system when Ikarus
-was installed.   By default, running the \texttt{configure} script
-installs the contributed libraries into the
-\verb|/usr/local/lib/ikarus| directory.  If a \verb|--prefix DIR|
-argument was supplied to \texttt{configure}, then the libraries are
-installed in the \verb|DIR/ikarus/lib| directory.  
+\section{\label{sec:environment-variables}Environment variables}
 
-You may install additional libraries into the Ikarus library
-directory.  Doing so makes them available for \texttt{import} into
-other libraries and script regardless of where the importing code is
-located or the current directory in which it is executed.  
+When the operating system starts a process, it starts the process in
+some environment that maps environment variables to values.  Typical
+keys found in the environment are \texttt{HOME} (pointing to the
+home directory of the user), \texttt{PATH} (containing a
+colon-separated list of directories to be searched when running a
+command from the shell), \texttt{SHELL}, \texttt{EDITOR}, and
+\texttt{PAGER}.  This section describes the procedures provided by
+Ikarus for manipulating this environment. 
 
-\section*{Defining \texttt{IKARUS\_LIBRARY\_PATH}}
-\index{ikarus library path@\texttt{IKARUS\_LIBRARY\_PATH}}
+The environment procedures are placed in the \texttt{(ikarus~ipc)}
+library because they provide a (limited) way for one process to
+communicate to a subprocess, akin to parameter passing.
 
-There may be situations in which you may wish to install your own
-libraries into a different location.  For example, you may not have
-sufficient administrative privileges to write to the system
-directory, or you may wish to keep your own libraries separate from
-the standard libraries.  Whatever the reason is, your can store your
-library files in any location you want and set up the
-\verb|IKARUS_LIBRARY_PATH| environment variable to point to these
-locations.  The value of \verb|IKARUS_LIBRARY_PATH| is a
-colon-separated list of directories in which Ikarus will search.
+\defun{getenv}{procedure}
+\texttt{(getenv key)}
 
-For example, suppose your script imports the
-\texttt{(streams~derived)} library.  First, Ikarus will map the
-library name to the file path \verb|streams/derived.ss|.  Suppose
-that Ikarus was installed using the \verb|--prefix /usr/local|
-configuration option, and suppose further that the value of
-\verb|IKARUS_LIBRARY_PATH| is set by the user to be 
-\verb|/home/john/ikarus-libraries:/home/john/srfis|.  Ikarus will
-search in the following locations in sequence until it finds the
-file it is looking for.
+The procedure \texttt{getenv} retrieves the value associated with
+\texttt{key} (which must be a string) in the environment.  The value
+returned is a (utf8-decoded) string, or \texttt{\#f} if there is no
+mapping for \texttt{key} in the environment.
+
+
+\defun{setenv}{procedure}
+\texttt{(setenv key value)}\\
+\texttt{(setenv key value overwrite?)}
+
+The procedure \texttt{setenv} sets the mapping of \texttt{key} to
+\texttt{value} in the environment.  Both \texttt{key} and
+\texttt{value} must be strings.  If the \texttt{overwrite?} argument
+is provided and is \texttt{\#f}, \texttt{setenv} does not overwrite 
+a value associated with \texttt{key} if one already exists.  The
+procedure \texttt{setenv} may raise an exception if the operating
+system cannot allocate enough memory to hold the new mapping.
+
+\defun{unsetenv}{procedure}
+\texttt{(unsetenv key)}
+
+The procedure \texttt{unsetenv} removes \texttt{key} and its
+associated value (if one exists) from the environment.
+
+
+\BoxedText{Caveat:}{The underlying system procedure \texttt{setenv}
+may leak some memory in some operating systems when passed some
+values.  Ikarus has no way of getting around this system limitation
+and thus may leak some memory for some calls to \texttt{setenv}.
+Use sparingly.}
+
+
+\newpage
+\section{\label{sec:subprocess}Subprocess communication}
+
+This section describes the facilities that Ikarus provides for
+starting subprocesses and sending and receiving data through the
+subprocesses' standard input, output, and error ports. 
+
+\defun{system}{procedure}
+\texttt{(system string)}
+
+The \texttt{system} procedure takes a string represeting an external
+shell command and arguments and invokes the shell (typically
+\texttt{sh} on Unix systems) on this command.  The returned value
+from \texttt{system} is the exit status of the external command.
+
+Ikarus's \texttt{system} procedure is a thin wrapper around the
+\texttt{system} procedure in the Standard C Library \texttt{libc}.
 
 \begin{verbatim}
-   ./streams/derived.ss
-   /home/john/ikarus-libraries/streams/derived.ss
-   /home/john/srfis/streams/derived.ss
-   /usr/local/lib/ikarus/streams/derived.ss
+  > (system "ls M*")
+  Makefile        Makefile.am     Makefile.in
+  0
 \end{verbatim}
 
-\BoxedText{Warning:}{The current behavior of Ikarus regarding the
-\texttt{IKARUS\_LIBRARY\_PATH} is preliminary and is likely to change
-in future releases.}
+\defun{process}{procedure}
+\texttt{(process program-name args ...)}
 
-The method in which the value of \verb|IKARUS_LIBRARY_PATH| is
-defined is typically shell dependant.  If you use GNU Bash, you
-typically set the values of environment variables in the
-\verb|~/.bash_profile| or \verb|~/.bashrc| file by adding the
-following lines:
+The \texttt{process} procedure takes as input a string representing
+the path to an external program and a set of strings that are the
+arguments to the external program.  It invokes the program with the
+given arguments, and returns four values: (1) a process identifier
+(\texttt{pid}),
+(2) an output port which pipes to the process's \texttt{stdin}, (3)
+an input port wired to the process's \texttt{stdout}, and (4) an
+input port wired to the process's \texttt{stderr}.  All three ports
+are blocking: reading and writing to any one of them blocks Ikarus
+until the some bytes are available for reading or writing.
+Attempting to read from the process's \texttt{stdout} port may block
+indefinitely if the external program does not write anything
+(e.g.,~if it attempts to read from \texttt{stdin} instead).
+Communicating with an external process must therefore be done
+according to the protocol in which the external process
+communicates.
+
+\defun{process-nonblocking}{procedure}
+\texttt{(process-nonblocking program-name args ...)}
+
+The procedure \texttt{process-nonblocking} is similar to the
+\texttt{process} procedure except that the three returned ports are
+put in nonblocking mode.  Attempting to perform a read or write
+operation on a nonblocking port in which bytes are not available for
+reading or writing causes Ikarus to enqueue the port with the
+continuation in which the read/write operation occurs and attempt to
+dispatch previously enqueued ports on which some bytes are ready for
+read or write.  See Section~\ref{sec:sockets} for more details on
+blocking and nonblocking operations.
+
+
+
+
+\defun{waitpid}{procedure}
+\texttt{(waitpid)}\\
+\texttt{(waitpid pid)}\\
+\texttt{(waitpid pid block?)}\\
+\texttt{(waitpid pid block? want-error?)}
+
+The \texttt{waitpid} procedure waits for the process with the given
+\texttt{pid} to terminate and, if successful, returns a
+\texttt{wstatus} object encapsulating the wait status of the
+process.  Without arguments, \texttt{waitpid} defaults the
+\texttt{pid} to \texttt{-1} which allows one to wait for any child
+process to exit.  If the \texttt{block?} argument is true (the
+default), \texttt{waitpid} blocks indefinitely waiting for a child
+process to exit.  When \texttt{block?} is false, \texttt{waitpid}
+returns immediately regardless of whether or not a child process has
+exited.  The \texttt{want-error?} controls what happens if
+\texttt{block?} was specified to be \texttt{\#f} and no child had
+exited.  If \texttt{want-error?} is true (the default), an error is
+signaled.  Otherwise, \texttt{waitpid} returns \texttt{\#f} if no
+process has exited.  Operations on the wait status result are listed
+below.
+
+\defun{wstatus-pid}{procedure}
+\texttt{(wstatus-pid wstatus)}
+
+The \texttt{wstatus-pid} returns the \texttt{pid} of the process
+whose status is recorded in the \texttt{wstatus} object.  This
+\texttt{pid} is most useful when the default \texttt{pid} of
+\texttt{-1} is given to \texttt{waitpid} and thus the pid of the
+exiting process is not known beforehand.
+
+
+\defun{wstatus-exit-status}{procedure}
+\texttt{(wstatus-exit-status wstatus)}
+
+The procedure \texttt{wstatus-exit-status} returns the exit status
+of the child process.  It is typically \texttt{0} if the child
+exited normally and has other numeric values if the child process
+encountered an error.
+
+\defun{wstatus-received-signal}{procedure}
+\texttt{(wstatus-received-signal wstatus)}
+
+The procedure \texttt{wstatus-received-signal} returns the 
+name  of the signal (or the number of the signal if the name is not
+known) that caused the child process to exit.
+
+The signal name is one of the following symbols:
+\begin{verbatim}
+  SIGABRT  SIGALRM  SIGBUS   SIGCHLD  SIGCONT    SIGFPE   SIGHUP 
+  SIGILL   SIGINT   SIGKILL  SIGPIPE  SIGQUIT    SIGSEGV  SIGSTOP
+  SIGTERM  SIGTSTP  SIGTTIN  SIGTTOU  SIGUSR1    SIGUSR2  SIGPOLL 
+  SIGPROF  SIGSYS   SIGTRAP  SIGURG   SIGVTALRM  SIGXCPU  SIGXFSZ
+\end{verbatim}
+ 
+\defun{kill}{procedure}
+\texttt{(kill pid signal-name)}
+
+The \texttt{kill} procedure takes a \texttt{pid} and a signal name 
+(a symbol from the list above) and asks the operating system to send
+the signal to the given process.
+
+
+
+
+\newpage 
+\section{\label{sec:sockets}TCP and UDP sockets}
+
+Ikarus supports synchronous (blocking) and asynchronous
+(multiplexing) communication facilities over both TCP/IP and UDP/IP
+channels.  It facilitates writing client and server applications
+that serve a variety of purposes, e.g., web servers,
+char clients, mail, news, et cetera.
+
+The synchronous model is simple and is ideal for noninteractive
+command-line applications that communicate with a single host at a
+time.  FTP clients, HTTP spiders, and off-line netnews caching
+programs typically use synchronous communication.  The basic
+operations start with connecting (via \texttt{tcp-connect}) to an
+internet service (identified by a port number or a service name)
+located on some host (identified by its host name or IP number).  By
+connecting to a server, we obtain an input port and an output port
+forming bidirectional channel of communication.  Depending on the
+service protocol, the client exchanges information with the server
+by reading and writing to the designated ports.  Read and write
+operations in this model may block indefinitely until appropriate
+number of bytes are read/written, or until the operation times out.
+Communication ends when the client closes both ports.
+
+The asynchronous model allows for communicating with many hosts
+simultaneously.  Ikarus maintains a queue of pending ports, the
+blocking operation performed on these ports, and their respective
+continuations.  Whenever the operating system indicates that a
+read/write operation may block, Ikarus schedules the port and  a
+restarting continuation into the queue and then dispatches one of
+the \emph{ready} operations.   This is reminiscent of how
+multitasking operating systems schedule I/O-bound threads, except
+that in Ikarus, threads are lightweight, represented by ordinary
+continuations.  Thus, reading or writing to a nonblocking port
+causes Ikarus to transparently capture a continuation, enlist it in
+the queue, and dispatch another continuation captured earlier.
+Multiple read and write operations from multiple connections are
+fulfilled concurrently, dispatching whichever one is ready and
+without one operation blocking the rest.
+
+Because asynchronous scheduling and dispatching involves switching
+continuations, winders that maintain the dynamic environment
+(e.g.,~those established by \texttt{dynamic-wind},
+\texttt{parameterize}, \texttt{with-output-to-file},
+\texttt{with-exception-handler}, etc.) are properly invoked when
+leaving a dynamic context and entering another.  Care must be taken
+when using winders that perform externally-visible side effects upon
+entering/leaving a dynamic context.
+
+
+\defun{tcp-connect}{procedure}
+\texttt{(tcp-connect host service)}
+
+The procedure \texttt{tcp-connect} attempts to connect to the
+\texttt{service} located on the remote \texttt{host} through the
+TCP/IP protocol.  The \texttt{host} argument is a string
+representing either the IP address (e.g., \texttt{"127.0.0.1"}) or a
+fully-qualified domain name (e.g., \texttt{"www.example.com"}), in
+which case name to address resolution is performed automatically.
+The \texttt{service} argument is also a string which can be either a
+port number (e.g., \texttt{"80"}) or a service name (e.g.,
+\texttt{"http"}) in which case the service name is mapped to the
+canonical port number for the service.
+
+Upon success, \texttt{tcp-connect} returns two values: a binary
+\emph{input} port and a binary \emph{output} port.  Writing and
+reading from the obtained ports may block indefinitely until an
+appropriate number of bytes is read/written.   Closing both ports
+closes the communication channel and frees the underlying
+operating-system resources.
+
+
+\defun{tcp-connect-nonblocking}{procedure}
+\texttt{(tcp-connect-nonblocking host service)}
+
+The procedure \texttt{tcp-connect-nonblocking} is similar to
+\texttt{tcp-connect} except that the two returned ports are put in
+\emph{nonblocking} mode.  If an attempt to perform a read (write)
+operation on the input (output) port may block, a restart
+continuation is captured and scheduled in the I/O queue and a
+perviously blocked operation may be restarted (when its blocking
+operation can progress).
+
+\defun{udp-connect}{procedure}
+\texttt{(udp-connect host service)}
+
+The procedure \texttt{udp-connect} is similar to
+\texttt{tcp-connect} except that it connects to the remote server
+through the UDP protocol (as implied by the name).
+
+\defun{udp-connect-nonblocking}{procedure}
+\texttt{(udp-connect-nonblocking host-name service-name)}
+
+The procedure \texttt{udp-connect-nonblocking} is similar to
+\texttt{tcp-connect-nonblocking} except that it connects to the
+remote server through the UDP protocol.
+
+
+\defun{tcp-server-socket}{procedure}
+\texttt{(tcp-server-socket port-number)}
+
+The procedure \texttt{tcp-server-socket} attempts to \emph{listen}
+on the given port number for incoming connections.  On success,
+\texttt{tcp-server-socket} returns an abstract \emph{tcp-server}
+object encapsulating the underlying operating-system server socket.
+The server socket is placed in \emph{blocking} mode: an attempt to
+accept a connection on such server blocks indefinitely
+until a remote client attempts to establish a connection.
+
+\defun{tcp-server-socket-nonblocking}{procedure}
+\texttt{(tcp-server-socket-nonblocking port-number)}
+
+This procedure is similar to \texttt{tcp-server-socket} except that
+the returned server socket is placed in \emph{nonblocking} mode.  An
+attempt to accept a connection from a nonblocking server socket does
+not block the entire process, instead, a restarting continuation is
+scheduled and is invoked when an incoming connection is available
+(and another I/O-bound operation blocks).
+
+
+\defun{accept-connection}{procedure}
+\texttt{(accept-connection tcp-server)}
+
+The procedure \texttt{accept-connection} takes a tcp-server socket
+(e.g., one obtained from \texttt{tcp-server-socket}) and returns two
+values: a binary \emph{input} port and a binary \emph{output} port
+through which the server communicates with the connecting client.
+If the \texttt{tcp-server} object is in blocking mode,
+\texttt{accept-connection} may block the entire process until an
+incoming connection is obtained.  If the server is in nonblocking
+mode, an (otherwise) blocking operation would be rescheduled and
+invoked later when a connection occurs.
+
+The input and output ports that \texttt{accept-connection} returns
+are put in blocking mode. .
+
+\newpage
+
+\defun{accept-connection-nonblocking}{procedure}
+\texttt{(accept-connection-nonblocking tcp-server)}
+
+The procedure \texttt{accept-connection-nonblocking} is similar to
+\texttt{accept-connection} except that the two returned ports are
+put in nonblocking mode.
+
+\defun{close-tcp-server-socket}{procedure}
+\texttt{(close-tcp-server-socket tcp-server)}
+
+This procedure closing the server socket (so that no more incoming
+connections can be accepted) and frees the underlying
+operating-system resources associated with the socket.
+
+
+\defun{register-callback}{procedure}
+\texttt{(register-callback input-port thunk)}\\
+\texttt{(register-callback output-port thunk)}\\
+\texttt{(register-callback tcp-server thunk)}
+
+
+The procedure \texttt{register-callback} takes a nonblocking port or
+server socket and a callback procedure.  It enqueues the port/socket
+and the thunk into the event queue.  The given procedure is called
+when another I/O operation blocks and data is ready to be read (for
+an input port argument), written (for an output port argument), or
+an incoming connection is available (for a tcp-server argument).
+The \texttt{register-callback} procedure returns immediately.  It
+does not block and does not attempt to perform any read, write, or
+accept operation on the given argument.
+
+
+
+
+\chapter{\label{chapter:foreign}The \texttt{(ikarus foreign)} library}
+
+
+This chapter describes the facilities through which Ikarus
+interfaces with the host operating system and other external
+libraries.  The facilities of the \texttt{(ikarus~foreign)}
+library give the Scheme program unrestricted access to the computer
+memory, allowing one to allocate, access, modify, and free memory as
+needed.  The facilities also allow the Scheme program to \emph{call
+out} to system procedures as well as allow the native procedures to
+\emph{call back} into Scheme.  
+
+This chapter is organized as follows: Section~\ref{sec:ffi-overview}
+gives an overview of the basic concepts such as shared libraries,
+external symbols, foreign data types, pointers, and procedures.
+Section~\ref{sec:ffi-memory} describes the primitives that
+\texttt{(ikarus~foreign)} provides for direct manipulation of
+memory.  Section~\ref{sec:ffi-procedures} deals with loading
+external libraries and calling out to native library procedures and
+calling back into Scheme.  To demonstrate the usefulness of the
+foreign facilities, Ikarus ships with two libraries that also serve
+as extended examples for using the system.
+Section~\ref{sec:ffi-opengl} describes The OpenGL library
+\texttt{(ikarus~opengl)} which allows the programmer to produce 2D
+and 3D computer graphics.  Section~\ref{sec:ffi-objc} describes the
+\texttt{(ikarus~objc)} which allows the programmer to access
+libraries and frameworks written in the Objective-C programming
+language and thus provides full access to the Mac OS X system
+(e.g.,~making graphical user interfaces with Cocoa and drawing
+graphics with Quartz all from Scheme).
+
+Ikarus version \texttt{0.0.4} is the first version of Ikarus to
+support the described foreign interfaces.
+\newpage
+
+\section{\label{sec:ffi-overview}Overview}
+
+In order to make full use of the computer, it is important for a
+programming environment (e.g., Ikarus Scheme) to facilitate access
+to the underlying architecture on which it runs.  The underlying
+architecture includes the API provided by the host operating system
+kernel (e.g., Linux), the system libraries (e.g., \texttt{libc}),
+and other site-installed libraries (e.g., \texttt{sqlite3}).
+Providing direct access to such API from within Scheme allows the
+programmer to write Scheme libraries that have few or no
+dependencies on external programs (such as \texttt{C} development
+toolchain).  When dealing with system libraries, the programmer
+must have a thorough understanding of many aspects of the targetted 
+system.  This section attempts to provide answers to many questions
+that are frequently encountered when interfacing to external
+libraries.
+
+
+\section{Memory management}
+
+Ikarus Scheme is a managed environment.  Like in many programming
+environments, Ikarus manages its own memory.  Scheme objects are
+allocated in a special memory region (the Scheme heap) and have
+type-specific object layout that allows the run time system to
+distinguish object types and allows the garbage collector to locate
+all potentially live objects and reclaim the memory of dead objects.
+Scheme objects are also \emph{opaque} in the sense that the data
+structures used to represent Scheme objects (e.g., pairs) are not
+exposed to the programmer, who can only interact with objects
+through an interface (e.g., \texttt{car}, \texttt{cdr}).  
+
+Unmanaged environments, such as the operating system on which Ikarus
+runs, require that the programmer manages the allocation and
+deallocation of system resources herself.  Memory regions, file
+handles, external devices, the screen, etc., are all examples of
+resources whose management must be coordinated among the different
+parts of the system, and this becomes the responsibility of the
+programmer who is wiring the different subsystems together.
+
+Memory, from a system's point of view, is \emph{transparent}.  A
+pointer is an integer denoting an address of memory.  This memory
+address may contain a value that requires interpretation.  At the
+lowest-level, each byte of memory contains eight bits, each of which
+may be toggled on or off.  A level higher, contiguous sequences of
+bytes are grouped together and are interpreted as integers, floating
+point numbers, or pointers to other memory addresses.  These are the
+basic data types that are often interpreted atomically.  Yet a level
+higher, groups of basic types form data structures such as arrays,
+linked lists, trees, and so on.  Objects, as found in
+object-oriented programming languages, are at an even higher level
+of abstraction since they are treated as opaque references that
+retain state and know how to respond to messages.
+
+The procedures in the \texttt{(ikarus~foreign)} library are meant to
+provide a way to interface with the low level memory operations such
+as setting and getting bytes from specific locations in memory.
+Although they do not provide high-level operations, the basic
+procdures make implementing high-level operations (such as the
+Objective-C system presented in Chapter~\ref{chapter:objc})
+possible.  Programmers are encouraged to define their own
+abstractions that are most suitable for the specific target library
+rather than using the low-level operations directly.  This results
+in writing more robust and more easily maintainable libraries.  To
+put it more boldly: \textbf{Do not sprinkle your code with low-level
+memory operations}.
+
+
+\section{\label{sec:ffi-memory}Memory operations}
+
+\defun{malloc}{procedure}
+\texttt{(malloc n)}
+
+The \texttt{malloc} procedure allocates \texttt{n} bytes of memory
+and returns a pointer to the allocated memory.  The \texttt{malloc}
+Scheme procedure is implemented using the host-provided
+\texttt{malloc} system procedure (often found in \texttt{libc}).
+The number of bytes, \texttt{n}, must be a positive exact integer.  
 
 \begin{verbatim}
-   IKARUS_LIBRARY_PATH=/path/to/some/directory:/and/another
-   export IKARUS_LIBRARY_PATH
+   > (malloc 10)
+   #<pointer #x00300320>
+   > (malloc 10000)
+   #<pointer #x01800400>
 \end{verbatim}
 
 \newpage
-\section{\texttt{(srfi *)}}
+\defun{free}{procedure}
+\texttt{(free p)}
 
-Ported by: Derick Eddington
+The \texttt{free} procedure takes a pointer and frees the memory
+region at the given address.  The memory region must be allocated
+with \texttt{malloc}, \texttt{calloc}, or a similar system
+procedure.  Once freed, memory operations on the given address are
+invalid and may cause the system to crash at unpredictable times.
+Ikarus cannot check for such errors since the memory may be freed by
+procedures that are external to Ikarus.
 
-Scheme Requests For Implementation (SRFIs) for R6RS/Ikarus can be found
-at: 
-\url{https://code.launchpad.net/~ikarus-srfi-team/ikarus-libraries/srfi}
 
-Currently provided:
-\begin{itemize}
-\item  SRFI-0:  \verb|(srfi feature-expand)|
-\item  SRFI-1:  \verb|(srfi lists)|
-\item  SRFI-2:  \verb|(srfi and-let)|
-\item  SRFI-6:  \verb|(srfi string-ports)|
-\item  SRFI-8:  \verb|(srfi receive)|
-\item  SRFI-9:  \verb|(srfi records)|
-\item  SRFI-11: \verb|(srfi let-values)|
-\item  SRFI-13: \verb|(srfi strings)|
-\item  SRFI-14: \verb|(srfi char-set)|
-\item  SRFI-16: \verb|(srfi case-lambda)|
-\item  SRFI-19: \verb|(srfi time)|
-\item  SRFI-23: \verb|(srfi error-reporting)|
-\item  SRFI-26: \verb|(srfi specialize-procedures)|
-\item  SRFI-27: \verb|(srfi random)|
-\item  SRFI-31: \verb|(srfi rec)|
-\item  SRFI-37: \verb|(srfi args-fold)|
-\item  SRFI-39: \verb|(srfi parameters)|
-\item  SRFI-41: \verb|(srfi streams)| \hspace{.5in}by Phil Bewig
-\item  SRFI-42: \verb|(srfi eager-comprehensions)|
-\item  SRFI-43: \verb|(srfi vectors)|
-\item  SRFI-67: \verb|(srfi compare)|
-\item  SRFI-78: \verb|(srfi lightweight-testing)|
-\end{itemize}
 
-To install (you'll need a new version of the Bazaar revision
-control system):
+\defun{pointer->integer}{procedure}
+\texttt{(pointer->integer p)}
+
+The procedure \texttt{pointer->integer} converts the value of the
+pointer \texttt{p} to an exact integer value.  The result may be a
+fixnum or a bignum depending on the pointer.
+
+\defun{integer->pointer}{procedure}
+\texttt{(integer->pointer n)}
+
+The procedure \texttt{integer->pointer} converts the exact integer
+\texttt{n} to a pointer value.  The lower 32 bits (or 64 bits on
+64-bit systems) of the value of \texttt{n} are significant in
+computing the pointer value.  It is guaranteed that 
+\texttt{(integer->pointer (pointer->integer p))} points to the same
+address as \texttt{p}.
+
+\defun{pointer?}{procedure}
+\texttt{(pointer? x)}
+
+The predicate \texttt{pointer?} returns \texttt{\#t} if the value
+of \texttt{x} is a pointer, and returns \texttt{\#f} otherwise.
+
+\BoxedText{Note:}{The result of calling the procedures
+\texttt{eq?}, \texttt{eqv?} and \texttt{equal?} on pointer values is
+unspecified.}
+
+
+\newpage
+
+\defun{pointer-set-c-char!}{procedure}
+\texttt{(pointer-set-c-char! p i n)}
+
+The procedure \texttt{pointer-set-c-char!} sets a single byte of memory
+located at offset \texttt{i} from the pointer \texttt{p} to the
+value of \texttt{n}.  The pointer \texttt{p} must be a valid
+pointer.  The index \texttt{i} must be an exact integer.  The value
+of \texttt{n} must be an exact integer.  Only the 8 lowermost
+bits of \texttt{n} are used in the operation and the remaining bits
+are ignored.
+
+\defun{pointer-set-c-short!}{procedure}
+\texttt{(pointer-set-c-short! p i n)}
+
+The procedure \texttt{pointer-set-c-char!!} sets two bytes located at
+offset \texttt{i} and \texttt{(+ i 1)} to the 16 lowermost bits of
+the exact integer \texttt{n}.  Note that the offset \texttt{i} is a
+byte offset; \texttt{pointer-set-c-short!} does not perform any pointer
+arithmetic such as scaling the offset by the size of the memory
+location.
+
+
+\defun{pointer-set-c-int!}{procedure}
+\texttt{(pointer-set-c-int! p i n)}
+
+The procedure \texttt{pointer-set-c-int!} sets four bytes located at
+offset \texttt{i} to \texttt{(+ i 3)} to the 32 lowermost bits of
+the exact integer \texttt{n}.  Like \texttt{pointer-set-c-short!},
+\texttt{pointer-set-c-int!} does not scale the offset \texttt{i}.
+
+
+\defun{pointer-set-c-long!}{procedure}
+\texttt{(pointer-set-c-long! p i n)}
+ 
+On 64-bit systems, the procedure \texttt{pointer-set-c-long!} sets
+eight bytes located at offset \texttt{i} to \texttt{(+ i 7)} to the
+64 lowermost bits of the exact integer \texttt{n}.  Like the
+previous procedures, \texttt{pointer-set-c-long!} does not scale the
+offset \texttt{i}.  On 32-bit systems, \texttt{pointer-set-c-long!}
+performs the same task as \texttt{pointer-set-c-int!}.
+
+
+\defun{pointer-set-c-float!}{procedure}
+\texttt{(pointer-set-c-float! p i fl)}
+
+The procedure \texttt{pointer-set-c-float!} converts the Scheme
+floating point number \texttt{fl} (represented in Ikarus as an
+IEEE-754 double precision floating point number) to a float (an
+IEEE-754 single precision floating point number) and stores the
+result in the four bytes at offset \texttt{i} of the pointer
+\texttt{p}.
+
+\defun{pointer-set-c-double!}{procedure}
+\texttt{(pointer-set-c-double! p i fl)}
+
+The procedure \texttt{pointer-set-c-double!} stores the double
+precision IEEE-754 floating point value of the Scheme flonum
+\texttt{fl} in the eight bytes at offset \texttt{i} of the pointer
+\texttt{p}.
+
+\defun{pointer-set-c-pointer!}{procedure}
+\texttt{(pointer-set-c-pointer! p i pv)}
+ 
+On 64-bit systems, the procedure \texttt{pointer-set-c-pointer!} sets
+eight bytes located at offset \texttt{i} to \texttt{(+ i 7)} to the
+64-bit pointer value of \texttt{pv}.  On 32-bit systems, the
+procedure \texttt{pointer-set-c-pointer!} sets four bytes located at
+offset \texttt{i} to \texttt{(+ i 3)} to the 32-bit pointer value of
+\texttt{pv}.  Like the previous procedures,
+\texttt{pointer-set-c-pointer!} does not scale the offset \texttt{i}. 
+
+
+
+\defun{pointer-ref-c-signed-char}{procedure}
+\texttt{(pointer-ref-c-signed-char p i)}
+
+The procedure \texttt{pointer-ref-c-signed-char} loads a single byte located
+at offset \texttt{i} from the pointer \texttt{p} and returns an
+exact integer representing the sign-extended integer value of that
+byte. The resulting value is in the range of $[-128, 127]$ inclusive.
+
+\defun{pointer-ref-c-unsigned-char}{procedure}
+\texttt{(pointer-ref-c-unsigned-char p i)}
+
+The procedure \texttt{pointer-ref-c-unsigned-char} loads a single byte
+located at offset \texttt{i} from the pointer \texttt{p} and returns
+an exact integer representing the unsigned integer value of that
+byte.  The resulting value is in the range $[0, 255]$ inclusive.
+
+
+The following example shows the difference between
+\texttt{pointer-ref-c-signed-char} and
+\texttt{pointer-ref-c-unsigned-char}.
+
+
 \begin{verbatim}
-$ bzr checkout --lightweight http://bazaar.launchpad.net/
-~ikarus-srfi-team/ikarus-libraries/srfi
+   > (let ([p (malloc 3)])
+       (pointer-set-c-char! p 0 #b01111111)
+       (pointer-set-c-char! p 1 #b10000000)
+       (pointer-set-c-char! p 2 #b11111111)
+       (let ([result
+              (list (pointer-ref-c-signed-char p 0)
+                    (pointer-ref-c-signed-char p 1)
+                    (pointer-ref-c-signed-char p 2)
+                    (pointer-ref-c-unsigned-char p 0)
+                    (pointer-ref-c-unsigned-char p 1)
+                    (pointer-ref-c-unsigned-char p 2))])
+         (free p)
+         result))
+   (127 -128 -1 127 128 255)
 \end{verbatim}
 
-After you do the above, you'll get a new \verb|srfi/| directory in the
-directory you ran the checkout command, and that parent directory of the
-new srfi/ directory needs to be in your
-\verb|IKARUS_LIBRARY_PATH|, so that
-attempts to import \verb|(srfi ---)| will look in the directory containing the
-\verb|srfi/| directory.
+\defun{pointer-ref-c-signed-short}{procedure}
+\texttt{(pointer-ref-c-signed-short p i)}
 
-You can stay up-to-date by changing directory into your
-\verb|srfi/| and doing:
-\begin{verbatim}
-$ bzr update
-\end{verbatim}
+The procedure \texttt{pointer-ref-c-signed-short} loads two bytes
+located at offsets \texttt{i} and \texttt{(+ i 1)} from the pointer
+\texttt{p} and returns an exact integer representing the
+sign-extended
+integer value of the sequence.  The resulting value is in the range
+$[-32768, 32767]$ inclusive.
 
+\defun{pointer-ref-c-unsigned-short}{procedure}
+\texttt{(pointer-ref-c-unsigned-short p i)}
 
-\newpage
-\section{\texttt{(math number-theory)}}
-Provided by: Jens Axel Søgaard
-
-URL: \url{https://code.launchpad.net/~soegaard/ikarus-libraries/soegaard}
-
-
-This library contains number theory code that I have written
-over a long period. The code began as an experiment.  I
-grabbed a book on number theory from the shelve (\emph{``Elementary
-Number Theory''} by Gareth A. Jones and J. Mary Jones) and began
-illustrating each definition and each theorem with Scheme
-code. The first half of the surce code is thus a well
-commented mix of definitions, theorems and code.
-
-The second half contains more sophisticated algorithms mostly
-of from the excellent book \emph{``Modern Computer Algebra''} by
-Joachim von zur Gathen and Jürgen Gerhard. The algorithms for
-factorizing large integers come from this book.
-
-Finally there are some definitions of special functions,
-mostly inspired by the problems of the Euler Project.
+The procedure \texttt{pointer-ref-c-unsigned-short} loads two bytes
+located at offsets \texttt{i} and \texttt{(+ i 1)} from the pointer
+\texttt{p} and returns an exact integer representing the unsigned
+integer value of the sequence.  The resulting value is in the range
+$[0, 65535]$ inclusive.
 
 \newpage
-\section{\texttt{(r6rs-clos)}}
-Provided by: Christian Sloma
+\defun{pointer-ref-c-signed-int}{procedure}
+\texttt{(pointer-ref-c-signed-int p i)}
 
-URL: \url{https://launchpad.net/r6rs-clos}
-
-
-\rnrs{6}-clos is a port of tiny-clos to the latest
-(6$^{\textrm{th}}$) revision
-of the language standard for scheme. It uses the library
-system that is new in \rnrs{6} to structure the code based on
-functionality (bootstrap of core classes and generic functions,
-actual implementation of the standard protocols, class layout
-and slot access \ldots).
-
-The homepage for now is \url{https://launchpad.net/r6rs-clos},
-where my current development branch can be found.
-
-% Currently the code in my repository will only work with the
-% 0.0.2 release of Ikarus and uses a private copy of two
-% SRFIs, but after the 0.0.3 release I intend to fix these so
-% that installing should be as simple as putting the r6rs-clos
-% files into the ikarus library load path and installing the
-% srfi's accordingly.
+The procedure \texttt{pointer-ref-c-signed-int} loads four bytes
+starting at offset \texttt{i} of pointer \texttt{p} and returns an
+exact integer in the range of $[-2^{31},2^{31}-1]$ inclusive.
 
 
-\newpage
-\section{SRFI-41: \texttt{(streams)}}
-\index{SRFI-41: Streams}
-\index{SRFI-41: Streams!1@\texttt{(streams)}}
-\index{SRFI-41: Streams!2@\texttt{(streams primitive)}}
-\index{SRFI-41: Streams!3@\texttt{(streams derived)}}
-The \texttt{(streams)}, \texttt{(streams~primitive)}, and
-\texttt{(streams~derived)} libraries are written by Philip L.~Bewig 
-as the reference implementation for SRFI-41.  
-See \url{http://srfi.schemers.org/srfi-41/srfi-41.html} for more
-details.  The following abstract is excerpted from the SRFI document.
-\nocite{srfi41}
+\defun{pointer-ref-c-unsigned-int}{procedure}
+\texttt{(pointer-ref-c-unsigned-int p i)}
 
+The procedure \texttt{pointer-ref-c-unsigned-int} loads four bytes
+starting at offset \texttt{i} of pointer \texttt{p} and returns an
+exact integer in the range of $[0,2^{32}-1]$ inclusive.
+
+
+\defun{pointer-ref-c-signed-long}{procedure}
+\texttt{(pointer-ref-c-signed-long p i)}
+
+On 64-bit systems, the procedure \texttt{pointer-ref-c-signed-long}
+loads eight bytes starting at offset \texttt{i} of pointer
+\texttt{p} and returns an integer in the range of
+$[-2^{63},2^{63}-1]$ inclusive.  On 32-bit systems, the procedure
+\texttt{pointer-ref-c-signed-long} performs the same task as
+\texttt{pointer-ref-c-signed-int}. 
+
+
+\defun{pointer-ref-c-unsigned-long}{procedure}
+\texttt{(pointer-ref-c-unsigned-long p i)}
+
+On 64-bit systems, the procedure \texttt{pointer-ref-c-unsigned-long}
+loads eight bytes starting at offset \texttt{i} of pointer
+\texttt{p} and returns an integer in the range of
+$[0,2^{64}-1]$ inclusive.  On 32-bit systems, the procedure
+\texttt{pointer-ref-c-unsigned-long} performs the same task as
+\texttt{pointer-ref-c-unsigned-int}. 
+
+
+\defun{pointer-ref-c-float}{procedure}
+\texttt{(pointer-ref-c-float p i)}
+
+The procedure \texttt{pointer-ref-c-float} returns the four-byte
+float (represented as IEEE-754 single precision floating point
+number) stored at offset \texttt{i} of the pointer \texttt{p}.
+The value is extended to an IEEE-754 double precision floating
+point number that Ikarus uses to represent inexact numbers.
+
+\defun{pointer-ref-c-double}{procedure}
+\texttt{(pointer-ref-c-double p i)}
+
+The procedure \texttt{pointer-ref-c-double} returns the eight-byte
+float (represented as IEEE-754 double precision floating point
+number) stored at offset \texttt{i} of the pointer \texttt{p}.
+
+
+\defun{pointer-ref-c-pointer}{procedure}
+\texttt{(pointer-ref-c-pointer p i)}
+
+The procedure \texttt{pointer-ref-c-pointer} returns the pointer
+stored at offset \texttt{i} from the pointer \texttt{p}.  The size
+of the pointer (also the number of bytes loaded) depends on the
+architecture: it is 4 bytes on 32-bit systems and 8 bytes on 64-bit
+systems.
+ 
+\section{\label{sec:foreign-objects}Accessing foreign objects from
+Scheme}
+
+
+\defun{dlopen}{procedure}
+\texttt{(dlopen)}\\
+\texttt{(dlopen library-name)}\\
+\texttt{(dlopen library-name lazy? global?)}
+
+The procedure \texttt{dlopen} takes a string \texttt{library-name}
+represented a system library and calls the system procedure
+\texttt{dlopen} which dynamically loads the given library into the
+running process.  The name of the library is system-dependent and
+must include the appropriate suffix (e.g., \texttt{*.so} on Linux,
+\texttt{*.dylib} on Darwin and \texttt{*.dll} on Cygwin).  The
+\texttt{library-name} may include a full path which identifies the
+location of the library, or may be just the name of the library in
+which case the system will lookup the library name using the
+\texttt{LD\_LIBRARY\_PATH} environment variable.
+
+The argument \texttt{lazy?} specifies how library dependencies are
+loaded.  If true, \texttt{dlopen} delays the resolution and loading
+of dependent libraries until they are actually used.  If false, all
+library dependencies are loaded before the call to \texttt{dlopen}
+returns.
+
+The argument \texttt{global?} specifies how the scope of the symbols
+exported from the loaded library.  If true, all exported symbols
+become part of the running image, and subsequent \texttt{dlsym}
+calls may not need to specify the library from which the symbol is
+loaded.  If false, the exported symbols are not global and the
+library pointer needs to be specified for \texttt{dlsym}.
+
+Calling \texttt{(dlopen library-name)} is equivalent to
+\texttt{(dlopen library-name \#f \#f)}.  Calling \texttt{(dlopen)}
+without arguments returns a pointer to the current process.
+
+If succesful, \texttt{dlopen} returns a pointer to the external
+library which can be used subsequently by \texttt{dlsym} and
+\texttt{dlclose}.  If the library cannot be loaded, \texttt{dlopen}
+returns \texttt{\#f} and the procedure \texttt{dlerror} can be used
+to obtain the cause of the failure.
+
+Consult the \texttt{dlopen(3)} page in your system manual for
+further details.
+
+\defun{dlclose}{procedure}
+\texttt{(dlclose library-pointer)}
+
+The procedure \texttt{dlclose} is a wrapped around the system
+procedure with the same name.  It receives a library pointer
+(e.g.,~one obtained from \texttt{dlopen}) and releases the resources
+loaded from that library.  Closing a library renders all symbols and
+static data structures that the library exports invalid and the
+program may crash or corrupt its memory if such symbols are used
+after a library is closed.
+
+Most system implementations of dynamic loading  employ reference
+counting for \texttt{dlopen} and \texttt{dlclose} in that library
+resources are not freed until the number of calls to
+\texttt{dlclose} matches the number of calls to \texttt{dlopen}.
+
+The procedure \texttt{dlclose} returns a boolean value indicating
+whether the success status of the operation.  If \texttt{dlclose}
+returns \texttt{\#f}, the procedure \texttt{dlerror} can be used to
+obtain the cause of the error.
+
+Consult the \texttt{dlclose(3)} page in your system manual for
+further details.
+
+\defun{dlerror}{procedure}
+\texttt{(dlerror)}
+
+If any of the dynamic loading operations (i.e., \texttt{dlopen},
+\texttt{dlclose}, \texttt{dlsym}) fails, the cause of the error can
+be obtained by calling \texttt{dlerror} which returns a string
+describing the error.  The procedure \texttt{dlerror} returns
+\texttt{\#f} if there was no dynamic loading error.
+
+Consult the \texttt{dlerror(3)} page in your system manual for
+further details.
+
+\defun{dlsym}{procedure}
+\texttt{(dlsym library-pointer string)}
+
+The procedure \texttt{dlsym} takes a library pointer (e.g., one
+obtained by a call to \texttt{dlopen}) and a string representing the
+name of a symbol that the library exports and returns a pointer to
+the location of that symbol in memory.  If \texttt{dlsym} fails, it
+returns \texttt{\#f} and the cause of the error can be obtained
+using the procedure \texttt{dlerror}.
+
+Consult the \texttt{dlsym(3)} page in your system manual for
+further details.
+
+
+\section{\label{sec:callout}Calling out to foreign procedures}
+
+Ikarus provides the means to call out from Scheme to foreign
+procedures.  This allows the programmers to extend Ikarus to access
+system-specific facilities that is available on the host machine.  
+
+In order to call out to a foreign procedure, one must provide two
+pieces of information: the signature of the foreign procedure (e.g.,
+its type declaration if it is a \texttt{C} procedure) and the
+address of the procedure in memory.  The address of the procedure
+can be easily obtained using \texttt{dlsym} if the name of the
+procedure and its exporting library are known.  The signature of the
+procedure cannot, in general, be obtained dynamically, and therefore
+must be hard coded into the program.
+
+The signature of the foreign procedure is required for proper
+linkeage between the Scheme system and the foreign system.  Using
+the signature, Ikarus determines how Scheme values are converted
+into native values, and where (e.g., in which registers and stack
+slots) to put these arguments.  The signature also determines where
+the returned values are placed and how they are converted from the
+system data types to the corresponding Scheme data types.
+
+A procedure's signature is composed of two parts: the return type
+and the parameter types.  The return type is a symbol that can be
+any one of the type specifiers listed in
+Figure~\ref{fig:foreign-types}, page~\pageref{fig:foreign-types}.
+The parameter types is a list of type specifier symbols.  The symbol
+\texttt{void} can appear as a return type but cannot appear as a
+parameter type.
+
+
+
+\defun{make-c-callout}{procedure}
+\texttt{((make-c-callout return-type parameter-types) native-pointer)}
+
+The procedure \texttt{make-c-callout} is the primary facility for
+making foreign procedures callable from Scheme.  It works as
+follows.  First, \texttt{make-c-callout} receives two arguments
+denoting the signature of the procedure to be called.  It prepares a
+bridge that converts from Scheme's calling conventions and data
+structures to their foreign counterparts.  It returns a procedure
+$p_1$.  Second, the procedure $p_1$ accepts a pointer to a foreign
+procedure (e.g., one obtained from \texttt{dlsym}) and returns a
+Scheme procedure $p_2$ that encapsulates the foreign procedure.  The
+final procedure $p_2$ can be called with as many arguments as the
+ones specified in the \texttt{parameter-types}.  The parameters
+supplies to $p_2$ must match the types supplied as the
+\texttt{parameter-types} according to the ``Valid Scheme types''
+column in the table in Figure~\ref{fig:foreign-types}.  The
+procedure $p_2$ converts the parameters from Scheme types to native
+types, calls the foreign procedure, obtains the result, and converts
+it to the appropriate Scheme value (depending on the
+\texttt{return-type}).
+
+The interface of \texttt{make-c-callout} is broken down into three
+stages in order to accomodate common usage patterns.  Often types, a
+function signature can be used by many foreign procedures and
+therefore, \texttt{make-c-callout} can be called once per signature
+and each signature can be used multiple times.  Similarly,
+separating the foreign procedure preparation from parameter passing
+allows for preparing the foreign procedure once and calling it many
+times. 
+
+The types listed in Figure~\ref{fig:foreign-types} are restricted to
+basic types and provide no automatic conversion from composite
+Scheme data structures (such as strings, symbols, vectors, and
+lists) to native types.  The restriction is intentional in order for
+Ikarus to avoid making invalid assumptions about the memory
+management of the targeted library.  For example, while Ikarus
+\emph{can} convert a Scheme string to a native byte array (e.g.,
+using \texttt{string->bytevector} to decode the string, then using
+\texttt{malloc} to allocate a temporary buffer, and copying the
+bytes from the bytevector to the allocated memory), it cannot decide
+when this allocated byte array is no longer needed and should be
+freed.  This knowledge is library-dependent and is often
+procedure-dependent.  Therefore, Ikarus leaves it to the programmer
+to manage all memory related issues.
+
+Outgoing parameters to foreign procedures are checked against the
+declared types.  For example, if a callback is prepared to expect a
+parameter of type \texttt{signed-int}, only exact integers are
+allowed to be passed out.  For integer types, only a fixed number of
+bits is used and the remaining bits are ignored.  For floating point
+types, the argument is checked to be a Scheme flonum.  No implicit
+conversion between exact and inexact numbers is performed.
+{
+\begin{figure}[b!]
 \begin{center}
-\rule{\textwidth}{1pt}
-Abstract
+\begin{tabular}{@{}llll@{}}
+\hline
+Type specifier & Size  & Valid Scheme types & Corresponding \texttt{C} types\\
+\hline 
+\texttt{signed-char} & 1 byte & exact integer & \texttt{char}\\
+\texttt{unsigned-char} & 1 byte & exact integer & \texttt{unsigned char}\\
+\texttt{signed-short} & 2 bytes & exact integer & \texttt{short}\\
+\texttt{unsigned-short} & 2 bytes & exact integer & \texttt{unsigned short}\\
+\texttt{signed-int} & 4 bytes & exact integer & \texttt{int}\\
+\texttt{unsigned-int} & 4 bytes & exact integer & \texttt{unsigned int}\\
+\texttt{signed-long} & 4/8 bytes & exact integer & \texttt{long}\\
+\texttt{unsigned-long} & 4/8 bytes & exact integer & \texttt{unsigned long}\\
+\texttt{float} & 4 bytes & flonum & \texttt{float}\\
+\texttt{double} & 8 bytes & flonum & \texttt{double}\\
+\texttt{pointer} & 4/8 bytes & pointer & 
+\texttt{void*}, \texttt{char*}, \texttt{int*}, \texttt{int**}, \\
+&&& \texttt{int(*)(int,int,int)}, etc. \\
+\texttt{void} & -- & -- & \texttt{void}\\
+\hline
+\end{tabular}
 \end{center}
+\caption{\label{fig:foreign-types}The above table lists valid type
+specifiers that can be used in callout and callback signatures.  
+Specifiers with ``4/8 bytes'' have size that depends on the system:
+it is 4 bytes on 32-bit systems and 8 bytes on 64-bit systems.  The
+\texttt{void} specifier can only be used as a return value
+specifier to mean ``no useful value is returned''.}
+\end{figure}
+}
 
-Streams, sometimes called lazy lists, are a sequential data
-structure containing elements computed only on demand. A stream is
-either null or is a pair with a stream in its cdr. Since elements of
-a stream are computed only when accessed, streams can be infinite.
-Once computed, the value of a stream element is cached in case it is
-needed again.
 
-Streams without memoization were first described by Peter Landin in
-1965. Memoization became accepted as an essential feature of streams
-about a decade later. Today, streams are the signature data type of
-functional programming languages such as Haskell.
+The following example illustrates the use of the
+\texttt{make-c-callout} procedure in combination with \texttt{dlopen}
+and \texttt{dlsym}.  The session was run on a 32-bit Ikarus running
+under Mac OS X 10.4.  First, the \texttt{libc.dylib} foreign library
+is loaded and is bound to the variable \texttt{libc}.  Next, we
+obtain a pointer to the \texttt{atan} foreign procedure that is
+defined in \texttt{libc}.  The native procedure \texttt{atan} takes
+a \texttt{double} as an argument and returns a \texttt{double} and
+that's the signature that we use for \texttt{make-c-callout}.
+Finally, we call the foreign procedure interface with one argument,
+\texttt{1.0}, which is a flonum and thus matches the required
+parameter type.  The native procedure returns a \texttt{double}
+value which is converted to the Scheme flonum with value
+\texttt{0.7853981633974483}.
 
-This Scheme Request for Implementation describes two libraries for
-operating on streams: a canonical set of stream primitives and a set
-of procedures and syntax derived from those primitives that permits
-convenient expression of stream operations. They rely on facilities
-provided by \rnrs{6}, including libraries, records, and error reporting.
-To load both stream libraries, say:
+\begin{verbatim}
+   > (import (ikarus foreign))
+   > (define libc (dlopen "libc.dylib"))
+   > libc
+   #<pointer #x00100770>
+   > (define libc-atan-ptr (dlsym libc "atan"))
+   > libc-atan-ptr
+   #<pointer #x9006CB1F>
+   > (define libc-atan 
+       ((make-c-callout 'double '(double)) libc-atan-ptr))
+   > libc-atan
+   #<procedure>
+   > (libc-atan 1.0)
+   0.7853981633974483
+   > (libc-atan 1)
+   Unhandled exception
+    Condition components:
+       1. &assertion
+       2. &who: callout-procedure
+       3. &message: "argument does not match type double"
+       4. &irritants: (1)
+\end{verbatim}
 
-\texttt{(import (streams))}
 
+\section{\label{sec:callback}Calling back to Scheme}
+
+In order to provide full interoperability with native procedures,
+Ikarus allows native procedures to call back into Scheme just as it
+allows Scheme to call out to native procedures.  This is important
+for many system libraries that provide graphical user interfaces
+with event handling (e.g., Cocoa, GTK+, GLUT, etc.), database
+engines (e.g., libsqlite, libmysql, etc.), among others.
+
+The native calling site for the call back is compiled with a
+specific callback signature encoding the expected parameter types
+and return type.  Therefore, a Scheme procedure used for a call back
+must be wrapped with a proper adapter that converts the incoming
+parameters from native format to Scheme values as well as convert
+the value that the Scheme procedure returns back to native format.
+The signature format is similar to the one used for call outs (see
+Figure~\ref{fig:foreign-types} on page~\pageref{fig:foreign-types} for
+details).
+
+
+\defun{make-c-callback}{procedure}
+\texttt{((make-c-callback return-type parameter-types) scheme-procedure)}
+
+The procedure \texttt{make-c-callback} is similar to the procedure
+\texttt{make-c-callout} except that it provides a bridge from native
+procedures back into Scheme.  While the procedure
+\texttt{make-c-callout} takes a native pointer and returns a Scheme
+procedure, \texttt{make-c-callback} takes a Scheme procedure and
+returns a native pointer.  The native pointer can be called by
+foreign procedures.  The native parameters are converted to Scheme
+data (according to \texttt{parameter-types}), the Scheme procedure
+is called with these parameters, and the returned value is converted
+back into native format (according to \texttt{return-type}) before
+control returns to the native call site.
+
+
+Note that the native procedure pointer obtained from
+\texttt{make-c-callback} is indistinguishable from other native
+procedures that are obtained using \texttt{dlsym} or similar means.
+In particular, such native pointers can be passed to
+\texttt{make-c-callout} resulting in a Scheme procedure that calls out
+to the native procedure that in turn calls back into Scheme.  The
+following segment illustrates a very inefficient way of extracting
+the lowermost 32 bits from an exact integer.
+
+\begin{verbatim}
+   > (format "~x"
+       (((make-c-callout 'unsigned-int '(unsigned-int))
+         ((make-c-callback 'unsigned-int '(unsigned-int)) 
+          values))
+        #xfedcba09876543210fedcba09876543210))
+   "76543210"
+\end{verbatim}
+
+\BoxedText{Caveat emptor:}{Preparing each call out and call back
+procedure leaks a small amount of memory.  This is because the
+system cannot track such pointers that go into native code
+(which may retain such pointers indefinitely).  Use judiciously.}
+
+
+\nocite{ghuloum-implicit}
+\nocite{ghuloum-generation}
+
+
+
+
+\appendix
 \chapter{Missing Features}
 
 Ikarus does not fully conform to \rnrs{6} yet.  Although it
-implements more than 94\% of \rnrs{6}'s macros and procedures, some
-are still missing.  This section summarizes the set of missing
-features and procedures.  
+implements most of \rnrs{6}'s macros and procedures, some are still
+missing.  This section summarizes the set of missing features and
+procedures.
 
 
 \begin{itemize}
-\item Numeric tower is complete except for complex numbers.\\
-  Consequences: \\
-  -- Reader does not recognize complex number notation
-    (e.g.~\texttt{5-7i}).\\
-  -- Procedures that may construct complex numbers from non-complex
-    arguments may signal an error or return an incorrect value
-    (e.g., \texttt{(sqrt~-1)} should return \verb|+i| instead
-    of signaling an error).
-\item The procedure \texttt{equal?}\ may not terminate on
-\texttt{equal?}\ infinite (circular) input.
 \item \texttt{number->string} does not accept the third argument
 (precision).  Similarly, \texttt{string->number} and the reader do
 not recognize the \texttt{|p} notation. 
-\end{itemize}
-\newpage
-\section{List of missing \rnrs{6} procedures}
-
-The following procedures are missing from \texttt{(rnrs base)}:
-\begin{Verbatim}
-angle make-polar make-rectangular
-\end{Verbatim}
-
-% magnitude 
-% string->utf16     
-% string->utf32 
-% utf16->string
-% utf32->string
 
 
-The following procedures are missing from \texttt{(rnrs unicode)}:
-\begin{Verbatim}
-string-downcase   string-titlecase   string-upcase    
-string-normalize-nfc      string-normalize-nfd 
-string-normalize-nfkc     string-normalize-nfkd   
-\end{Verbatim}
-
-
-The following procedures are missing from \texttt{(rnrs arithmetic
+\item The following procedures are missing from \texttt{(rnrs arithmetic
 bitwise)}:
 \begin{Verbatim}
-bitwise-ior  bitwise-xor  bitwise-if  bitwise-copy-bit-field      
 bitwise-reverse-bit-field bitwise-rotate-bit-field 
 \end{Verbatim}
-% bitwise-bit-field  
-% bitwise-copy-bit 
-% bitwise-length  
 
-The following procedures are missing from \texttt{(rnrs arithmetic
+\item The following procedures are missing from \texttt{(rnrs arithmetic
 fixnum)}:
 \begin{Verbatim}
 fxreverse-bit-field   fxrotate-bit-field   
 \end{Verbatim}
 
 
-The following procedures are missing from \texttt{(rnrs hashtables)}:
+\item The following procedures are missing from \texttt{(rnrs hashtables)}:
 \begin{Verbatim}
-make-eqv-hashtable         make-hashtable           equal-hash
-hashtable-hash-function    hashtable-equivalence-function 
+equal-hash
 \end{Verbatim}
 
-
-
-The following procedures are missing from \texttt{(rnrs io ports)}:
+\item The following procedures are missing from \texttt{(rnrs io ports)}:
 \begin{Verbatim}
-string->bytevector                  bytevector->string
-port-has-port-position?             port-position
-port-has-set-port-position!?        set-port-position!
 make-custom-binary-input/output-port    
 make-custom-textual-input/output-port 
 open-file-input/output-port
 \end{Verbatim}
 
-
-% get-bytevector-some
-% call-with-bytevector-output-port  
-% call-with-string-output-port
-% binary-port?
-% textual-port? 
-% port-eof?
-% call-with-port 
-% lookahead-char  
-% lookahead-u8
-% get-bytevector-all
-% get-bytevector-some  
-% get-string-all
-% make-custom-binary-input-port         
-% make-custom-binary-output-port        
-% make-custom-textual-input-port    
-% make-custom-textual-output-port
-% open-bytevector-input-port  
-% open-bytevector-output-port 
-% open-file-input-port  
-% open-file-output-port    
-% transcoded-port 
-% port-transcoder
-% put-bytevector 
-% output-port-buffer-mode 
-
-
-
-\nocite{ghuloum-implicit}
-\nocite{ghuloum-generation}
+\end{itemize}
 
 \newpage
+
 \backmatter
-\appendix
+%\appendix
 \phantomsection
 %\addcontentsline{toc}{chapter}{Bibliogaraphy}
 \addcontentsline{toc}{chapter}{\bibname}
