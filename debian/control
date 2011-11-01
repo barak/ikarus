@@ -11,7 +11,7 @@ Vcs-Git: git://git.debian.org/git/collab-maint/ikarus.git
 Vcs-Browser: http://git.debian.org/?p=collab-maint/ikarus.git
 
 Package: ikarus
-Architecture: i386
+Architecture: i386 amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Scheme compiler and interpreter
  Ikarus is a compiler-based implementation of the Scheme programming
