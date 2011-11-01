@@ -5,7 +5,7 @@ Maintainer: Barak A. Pearlmutter <bap@debian.org>
 Build-Depends: debhelper (>= 8),
 	       autotools-dev (>= 20100122.1~),
 	       libgmp3-dev
-Standards-Version: 3.9.1
+Standards-Version: 3.9.2
 Homepage: http://ikarus-scheme.org/
 Vcs-Git: git://git.debian.org/git/collab-maint/ikarus.git
 Vcs-Browser: http://git.debian.org/?p=collab-maint/ikarus.git
