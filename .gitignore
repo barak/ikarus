@@ -19,3 +19,13 @@
 /src/scheme-script
 /stamp-h1
 /src/*.o
+Makefile.in
+/aclocal.m4
+/compile
+/config.guess
+/config.h.in
+/config.sub
+/configure
+/depcomp
+/install-sh
+/missing

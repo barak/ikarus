@@ -3,3 +3,5 @@
 /*.substvars
 /files
 /ikarus/
+/autoreconf.after
+/autoreconf.before
