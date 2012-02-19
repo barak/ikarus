@@ -4,3 +4,4 @@
 0004-map-anon.patch
 0005-rand-vs-random.patch
 0006-flonums-rounding-comment.patch
+0007-automake-pkglib.patch

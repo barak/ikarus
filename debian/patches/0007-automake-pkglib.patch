@@ -1,0 +1,90 @@
+From: Leo Iannacone <l3on@ubuntu.com>
+Date: Sun, 19 Feb 2012 09:16:39 +0000
+Subject: automake pkglib
+
+Replace pkglib (deprecated) with pkgdata in Makefile.am.
+Fixes building with automake 1.11.2 or greater, in which
+pkglib_DATA gives an error.
+(Patch reworked slightly by Barak A. Pearlmutter.)
+
+Bug-Ubuntu: https://bugs.launchpad.net/+bug/935180
+---
+ lib/Makefile.am    |    4 ++--
+ scheme/Makefile.am |   10 +++++-----
+ src/Makefile.am    |    3 ++-
+ 3 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/lib/Makefile.am b/lib/Makefile.am
+index f17b22c..4575dcd 100644
+--- a/lib/Makefile.am
++++ b/lib/Makefile.am
+@@ -1,4 +1,4 @@
+-libikarusdir=$(pkglibdir)/ikarus
++libikarusdir=$(pkglibdir)
+ dist_libikarus_DATA= ikarus/foreign.ss ikarus/ipc.ss \
+  ikarus/include.ss \
+  ikarus/flonum-parser.sls ikarus/flonum-formatter.sls 
+@@ -6,7 +6,7 @@ libCocoadir=$(pkglibdir)/Cocoa
+ dist_libCocoa_DATA=Cocoa/helpers.ss
+ 
+ 
+-dist_pkglib_DATA= match.ss gl.ss glut.ss \
++dist_libikarus_DATA+= match.ss gl.ss glut.ss \
+   ypsilon-compat.ikarus.ss ypsilon-compat.ypsilon.ss \
+   objc.ss Cocoa.ss 
+ 
+diff --git a/scheme/Makefile.am b/scheme/Makefile.am
+index f88f745..1da7852 100644
+--- a/scheme/Makefile.am
++++ b/scheme/Makefile.am
+@@ -1,5 +1,5 @@
+-
+-nodist_pkglib_DATA=ikarus.boot
++libikarusdir=$(pkglibdir)
++nodist_libikarus_DATA=ikarus.boot
+ 
+ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
+   ikarus.enumerations.ss run-tests.ss \
+@@ -100,7 +100,7 @@ EXTRA_DIST=ikarus.boot.4.prebuilt ikarus.boot.8.prebuilt last-revision \
+   tests/tests-5.6-req.scm \
+   tests/unicode.ss
+ 
+-all: $(nodist_pkglib_DATA)
++all: $(nodist_libikarus_DATA)
+ 
+ revno = "$(shell sed 's/ .*//' ../.bzr/branch/last-revision 2>/dev/null)"
+ $(srcdir)/last-revision: $(shell ls ../.bzr/branch/last-revision 2>/dev/null) 
+@@ -111,12 +111,12 @@ sizeofvoidp = $(shell grep SIZEOF_VOID_P ../config.h | sed "s/.*\(.\)/\1/g")
+ ikarus.config.ss: Makefile last-revision ../config.h
+ 	echo '(define ikarus-version "$(PACKAGE_VERSION)")' >$@
+ 	echo '(define ikarus-revision "$(shell cat $(srcdir)/last-revision)")' >>$@
+-	echo '(define ikarus-lib-dir "$(pkglibdir)")' >>$@
++	echo '(define ikarus-lib-dir "$(libikarusdir)")' >>$@
+ 	echo '(define target "$(target)")' >>$@
+ 	echo '(define wordsize $(sizeofvoidp))' >>$@
+ 
+ 
+-CLEANFILES=$(nodist_pkglib_DATA) ikarus.config.ss
++CLEANFILES=$(nodist_libikarus_DATA) ikarus.config.ss
+ MAINTAINERCLEANFILES=last-revision
+ 
+ ikarus.boot: $(EXTRA_DIST) ikarus.config.ss 
+diff --git a/src/Makefile.am b/src/Makefile.am
+index af77491..b8acde1 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -1,3 +1,4 @@
++libikarusdir=$(pkglibdir)
+ 
+ bin_PROGRAMS = ikarus scheme-script
+ 
+@@ -16,7 +17,7 @@ nodist_ikarus_SOURCES = bootfileloc.h
+ BUILT_SOURCES = bootfileloc.h
+ 
+ bootfileloc.h: Makefile
+-	echo '#define BOOTFILE "$(pkglibdir)/ikarus.boot"' >$@
++	echo '#define BOOTFILE "$(libikarusdir)/ikarus.boot"' >$@
+ 	echo '#define EXEFILE "$(bindir)/ikarus"' >>$@
+ 
+ CLEANFILES = bootfileloc.h
+-- 
