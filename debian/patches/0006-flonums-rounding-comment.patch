@@ -7,10 +7,10 @@ Subject: flonums rounding comment
  1 files changed, 8 insertions(+), 0 deletions(-)
 
 diff --git a/src/ikarus-flonums.c b/src/ikarus-flonums.c
-index f699c56..7043dc0 100644
+index 3cc982d..64257c8 100644
 --- a/src/ikarus-flonums.c
 +++ b/src/ikarus-flonums.c
-@@ -23,6 +23,14 @@
+@@ -24,6 +24,14 @@
  #include <errno.h>
  #include <math.h>
  

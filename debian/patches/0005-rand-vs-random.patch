@@ -7,10 +7,10 @@ Subject: rand vs random
  1 files changed, 1 insertions(+), 1 deletions(-)
 
 diff --git a/src/ikarus-numerics.c b/src/ikarus-numerics.c
-index 436e926..a6b871c 100644
+index 6c24364..88f5883 100644
 --- a/src/ikarus-numerics.c
 +++ b/src/ikarus-numerics.c
-@@ -1739,7 +1739,7 @@ ikrt_fxrandom(ikptr x){
+@@ -1932,7 +1932,7 @@ ikrt_fxrandom(ikptr x){
      }
    }
    while(1){

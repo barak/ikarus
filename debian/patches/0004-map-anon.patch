@@ -9,10 +9,10 @@ Subject: map anon
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/src/ikarus-main.c b/src/ikarus-main.c
-index aa36789..78a2999 100644
+index 86d1820..b582f24 100644
 --- a/src/ikarus-main.c
 +++ b/src/ikarus-main.c
-@@ -271,7 +271,7 @@ void
+@@ -174,7 +174,7 @@ void
  register_alt_stack(){
  #if HAVE_SIGALTSTACK
    char* stk = mmap(0, SIGSTKSZ, PROT_READ|PROT_WRITE|PROT_EXEC, 
@@ -22,10 +22,10 @@ index aa36789..78a2999 100644
    if(stk == (char*)-1){
      fprintf(stderr, "Cannot maloc an alt stack\n");
 diff --git a/src/ikarus-runtime.c b/src/ikarus-runtime.c
-index df907a5..d5660ee 100644
+index 07490a8..77fb0ea 100644
 --- a/src/ikarus-runtime.c
 +++ b/src/ikarus-runtime.c
-@@ -222,7 +222,7 @@ ik_mmap(int size){
+@@ -220,7 +220,7 @@ ik_mmap(unsigned long int size){
        0,
        mapsize,
        PROT_READ | PROT_WRITE | PROT_EXEC,

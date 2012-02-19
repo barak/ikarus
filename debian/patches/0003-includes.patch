@@ -8,7 +8,7 @@ Subject: includes
  2 files changed, 3 insertions(+), 0 deletions(-)
 
 diff --git a/src/ikarus-collect.c b/src/ikarus-collect.c
-index b6afd04..a78ef30 100644
+index 0dbf77a..0095f69 100644
 --- a/src/ikarus-collect.c
 +++ b/src/ikarus-collect.c
 @@ -22,11 +22,13 @@
@@ -26,7 +26,7 @@ index b6afd04..a78ef30 100644
  #define forward_ptr ((ikptr)-1)
  #define minimum_heap_size (pagesize * 1024 * 4)
 diff --git a/src/ikarus-fasl.c b/src/ikarus-fasl.c
-index 9a24588..935735c 100644
+index 11a9365..f90ad3a 100644
 --- a/src/ikarus-fasl.c
 +++ b/src/ikarus-fasl.c
 @@ -25,6 +25,7 @@
