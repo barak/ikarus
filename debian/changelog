@@ -1,3 +1,10 @@
+ikarus (0.0.3+bzr.2010.01.26-3) unstable; urgency=low
+
+  * clarify GFDL non-issue in DEP5-updated debian/copyright, addressing 708954
+    (files were relicensed GNU GPL-3 prior to 0.0.2 upstream release)
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Wed, 22 May 2013 16:18:45 +0100
+
 ikarus (0.0.3+bzr.2010.01.26-2) unstable; urgency=low
 
   * remove autoreconf-regenerated files to avoid confusion
