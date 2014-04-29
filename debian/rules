@@ -1,11 +1,7 @@
 #!/usr/bin/make -f
 
-dh_targets=binary binary-arch binary-indep build build-arch build-indep clean install
-
-$(dh_targets) %:
+%:
 	dh $@ --with autoreconf --parallel
-
-.PHONY: $(dh_targets)
 
 override_dh_auto_build:
 	egrep -q '^flags[[:space:]]*:.*\bsse2\b' /proc/cpuinfo \
@@ -17,8 +13,8 @@ override_dh_auto_build:
 
 override_dh_install:
 	dh_install
-	rm debian/ikarus/usr/share/doc/ikarus/COPYING
-	rm debian/ikarus/usr/share/doc/ikarus/GPL-3
+	-rm --verbose debian/ikarus/usr/share/doc/ikarus/COPYING
+	-rm --verbose debian/ikarus/usr/share/doc/ikarus/GPL-3
 
 override_dh_compress:
 	dh_compress -Xikarus-scheme-users-guide.pdf
