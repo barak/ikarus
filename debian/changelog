@@ -1,3 +1,11 @@
+ikarus (0.0.3+bzr.2010.01.26-4) unstable; urgency=medium
+
+  * bump policy version
+  * update packaging repo URLs to new canonical scheme
+  * tweak debian/rules to not annoy gnu make 4.0
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue, 29 Apr 2014 11:17:31 +0100
+
 ikarus (0.0.3+bzr.2010.01.26-3) unstable; urgency=low
 
   * clarify GFDL non-issue in DEP5-updated debian/copyright, addressing 708954
