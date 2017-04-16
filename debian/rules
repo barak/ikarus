@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@ --with autoreconf --parallel
+	dh $@
 
 override_dh_auto_build:
 	egrep -q '^flags[[:space:]]*:.*\bsse2\b' /proc/cpuinfo \
