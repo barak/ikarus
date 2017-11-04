@@ -1,11 +1,11 @@
 Source: ikarus
 Section: lisp
-Priority: extra
+Priority: optional
 Maintainer: Barak A. Pearlmutter <bap@debian.org>
 Build-Depends: debhelper (>= 10),
 	       libffi-dev,
 	       libgmp-dev
-Standards-Version: 3.9.8
+Standards-Version: 4.1.1
 Homepage: http://ikarus-scheme.org/
 Vcs-Git: git://anonscm.debian.org/collab-maint/ikarus.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/ikarus.git
