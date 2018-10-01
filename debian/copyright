@@ -1,9 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: ikarus
 Source: http://www.cs.indiana.edu/~aghuloum/ikarus/ikarus-0.0.3.tar.gz
-	http://ikarus-scheme.org/ikarus-0.0.3.tar.gz
+        http://ikarus-scheme.org/ikarus-0.0.3.tar.gz
     	bzr repository http://ikarus-scheme.org/ikarus.dev
-	bzr repository http://bazaar.launchpad.net/~aghuloum/ikarus/ikarus.dev
+ 	bzr repository http://bazaar.launchpad.net/~aghuloum/ikarus/ikarus.dev
 
 Files: *
 Copyright: Copyright (c) 2006, 2007, 2008  Abdulaziz Ghuloum <aghuloum@cs.indiana.edu>
@@ -154,7 +154,7 @@ Copyright: Dorai Sitaram <dorai@ccs.neu.edu>
 License: SITARAM
 
 License: SITARAM
- Dorai Sitaram <dorai@ccs.neu.edu> stated, refering to these files,
+ Dorai Sitaram <dorai@ccs.neu.edu> stated, referring to these files,
  that "FS (as in GPL, LGPL) bundlers who require a standard license
  may use the LGPL to bundle any of these items."
  (http://www.ccs.neu.edu/~dorai/, 10-Feb-2008)
@@ -165,7 +165,7 @@ License: SITARAM
 Files: benchmarks/*
 Coyright: Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
  	  Copyright 2000 Sun Microsystems, Inc. All rights reserved.
-	  Copyright (c) 1995 by Olin Shivers.
+ 	  Copyright (c) 1995 by Olin Shivers.
 License: LARCENCY-GAMBIT
 
 License: LARCENCY-GAMBIT
@@ -254,7 +254,7 @@ License: LAWFUL
 
 Files: lib/Base/shivers-syntax.sch
 Copyright: Copyright (c) 1993-1999 Richard Kelsey and Jonathan Rees
-	   Copyright (c) 1994-1999 by Olin Shivers and Brian D. Carlstrom.
+           Copyright (c) 1994-1999 by Olin Shivers and Brian D. Carlstrom.
 License: 3-Clause
 
 License: 3-Clause

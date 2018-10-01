@@ -1,5 +1,16 @@
 ikarus (0.0.3+bzr.2010.01.26-5) UNRELEASED; urgency=medium
 
+  [ Ondřej Nový ]
+  * d/copyright: Change Format URL to correct one
+
+  [ Barak A. Pearlmutter ]
+  * debian/copyright: use spaces rather than tabs to start continuation
+    lines.
+
+ -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:10:59 +0200
+
+ikarus (0.0.3+bzr.2010.01.26-5) UNRELEASED; urgency=medium
+
   * d/copyright: Change Format URL to correct one
 
  -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:10:59 +0200
