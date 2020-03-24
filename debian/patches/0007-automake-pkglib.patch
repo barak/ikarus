@@ -9,9 +9,9 @@ pkglib_DATA gives an error.
 
 Bug-Ubuntu: https://bugs.launchpad.net/+bug/935180
 ---
- lib/Makefile.am    |    4 ++--
- scheme/Makefile.am |   10 +++++-----
- src/Makefile.am    |    3 ++-
+ lib/Makefile.am    |  4 ++--
+ scheme/Makefile.am | 10 +++++-----
+ src/Makefile.am    |  3 ++-
  3 files changed, 9 insertions(+), 8 deletions(-)
 
 diff --git a/lib/Makefile.am b/lib/Makefile.am
@@ -87,4 +87,3 @@ index af77491..b8acde1 100644
  	echo '#define EXEFILE "$(bindir)/ikarus"' >>$@
  
  CLEANFILES = bootfileloc.h
--- 

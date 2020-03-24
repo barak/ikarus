@@ -3,9 +3,9 @@ Date: Tue, 1 Nov 2011 12:39:50 +0000
 Subject: includes
 
 ---
- src/ikarus-collect.c |    2 ++
- src/ikarus-fasl.c    |    1 +
- 2 files changed, 3 insertions(+), 0 deletions(-)
+ src/ikarus-collect.c | 2 ++
+ src/ikarus-fasl.c    | 1 +
+ 2 files changed, 3 insertions(+)
 
 diff --git a/src/ikarus-collect.c b/src/ikarus-collect.c
 index 0dbf77a..0095f69 100644
@@ -37,4 +37,3 @@ index 11a9365..f90ad3a 100644
  #include <errno.h>
  #include <unistd.h>
  #include <assert.h>
--- 

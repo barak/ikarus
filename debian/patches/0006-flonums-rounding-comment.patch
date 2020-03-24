@@ -3,8 +3,8 @@ Date: Tue, 1 Nov 2011 12:45:01 +0000
 Subject: flonums rounding comment
 
 ---
- src/ikarus-flonums.c |    8 ++++++++
- 1 files changed, 8 insertions(+), 0 deletions(-)
+ src/ikarus-flonums.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
 diff --git a/src/ikarus-flonums.c b/src/ikarus-flonums.c
 index 3cc982d..64257c8 100644
@@ -25,4 +25,3 @@ index 3cc982d..64257c8 100644
  ikptr
  ikrt_fl_round(ikptr x, ikptr y){
    flonum_data(y) = round(flonum_data(x));
--- 

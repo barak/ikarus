@@ -3,8 +3,8 @@ Date: Tue, 1 Nov 2011 12:36:57 +0000
 Subject: typos
 
 ---
- README |    2 +-
- 1 files changed, 1 insertions(+), 1 deletions(-)
+ README | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/README b/README
 index 4595393..76ff9ad 100644
@@ -19,4 +19,3 @@ index 4595393..76ff9ad 100644
  
  The main purpose behind releasing Ikarus early is to give Scheme
  programmers the opportunity to experiment with the various new
--- 

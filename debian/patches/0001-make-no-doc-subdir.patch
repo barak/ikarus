@@ -3,8 +3,8 @@ Date: Tue, 1 Nov 2011 12:33:29 +0000
 Subject: make no doc subdir
 
 ---
- Makefile.am |    2 +-
- 1 files changed, 1 insertions(+), 1 deletions(-)
+ Makefile.am | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/Makefile.am b/Makefile.am
 index 9d33980..844368a 100644
@@ -16,4 +16,3 @@ index 9d33980..844368a 100644
 +SUBDIRS = src scheme lib benchmarks
  EXTRA_DIST = README COPYING GPL-3 ACKNOWLEDGMENTS
  dist_doc_DATA=README COPYING GPL-3 ACKNOWLEDGMENTS
--- 

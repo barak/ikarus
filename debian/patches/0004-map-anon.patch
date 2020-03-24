@@ -3,9 +3,9 @@ Date: Tue, 1 Nov 2011 12:41:15 +0000
 Subject: map anon
 
 ---
- src/ikarus-main.c    |    2 +-
- src/ikarus-runtime.c |    2 +-
- src/ikarus-winmmap.c |    2 +-
+ src/ikarus-main.c    | 2 +-
+ src/ikarus-runtime.c | 2 +-
+ src/ikarus-winmmap.c | 2 +-
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/src/ikarus-main.c b/src/ikarus-main.c
@@ -47,4 +47,3 @@ index c207e50..9f7a379 100644
    if(x == (void*)-1){
      fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
      exit(-1);
--- 

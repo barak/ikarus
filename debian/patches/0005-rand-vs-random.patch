@@ -3,8 +3,8 @@ Date: Tue, 1 Nov 2011 12:44:12 +0000
 Subject: rand vs random
 
 ---
- src/ikarus-numerics.c |    2 +-
- 1 files changed, 1 insertions(+), 1 deletions(-)
+ src/ikarus-numerics.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/ikarus-numerics.c b/src/ikarus-numerics.c
 index 6c24364..88f5883 100644
@@ -19,4 +19,3 @@ index 6c24364..88f5883 100644
      if(r < n){
        return fix(r);
      }
--- 
