@@ -6,6 +6,8 @@ ikarus (0.0.3+bzr.2010.01.26-5) UNRELEASED; urgency=medium
   [ Barak A. Pearlmutter ]
   * debian/copyright: use spaces rather than tabs to start continuation
     lines.
+  * Bump debhelper from old 10 to 12.
+  * Set debhelper-compat version in Build-Depends.
 
  -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:10:59 +0200
 
