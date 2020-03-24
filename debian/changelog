@@ -1,21 +1,19 @@
-ikarus (0.0.3+bzr.2010.01.26-5) UNRELEASED; urgency=medium
+ikarus (0.0.3+bzr.2010.01.26-5) unstable; urgency=medium
 
   [ Ondřej Nový ]
   * d/copyright: Change Format URL to correct one
 
   [ Barak A. Pearlmutter ]
   * debian/copyright: use spaces rather than tabs to start continuation
-    lines.
-  * Bump debhelper from old 10 to 12.
-  * Set debhelper-compat version in Build-Depends.
+    lines, and fix one-character typo
+  * bump debhelper from old 10 to 12.
+  * set debhelper-compat version in Build-Depends.
+  * bump policy version
+  * gbp import/export patches
+  * Rules-Requires-Root: no
+  * install as /usr/bin/scheme and scheme-script alternative
 
- -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:10:59 +0200
-
-ikarus (0.0.3+bzr.2010.01.26-5) UNRELEASED; urgency=medium
-
-  * d/copyright: Change Format URL to correct one
-
- -- Ondřej Nový <onovy@debian.org>  Mon, 01 Oct 2018 10:10:59 +0200
+ -- Barak A. Pearlmutter <bap@debian.org>  Wed, 25 Mar 2020 08:46:17 +0000
 
 ikarus (0.0.3+bzr.2010.01.26-4) unstable; urgency=medium
 
