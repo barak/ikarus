@@ -71,6 +71,7 @@ License: PSYNTAX
  DEALINGS IN THE SOFTWARE. 
 
 Files: install-sh
+Copyright: 1994 X Consortium
 License: MIT-X-License
 
 License: MIT-X-License
@@ -103,6 +104,7 @@ License: MIT-X-License
  FSF changes to this file are in the public domain.
 
 Files: lib/match.ss
+Copyright: 2002-2008 Dan Friedman, Erik Hilsdale, Kent Dybvig, Aziz Ghuloum
 License: FRIEDMAN
 
 License: FRIEDMAN
@@ -141,6 +143,8 @@ License: BEWIG
  SOFTWARE.
 
 Files: benchmarks/parsing-data.ss
+Copyright: 1985, Bob Boyer
+           1987-2001 Will Clinger
 License: public-domain
 
 License: public-domain
