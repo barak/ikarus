@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ]; then
+    update-alternatives --remove scheme /usr/bin/ikarus
+    update-alternatives --remove scheme-script /usr/bin/ikarus-scheme-script
+fi
+
+#DEBHELPER#

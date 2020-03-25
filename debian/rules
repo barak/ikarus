@@ -13,6 +13,10 @@ override_dh_auto_build:
 	dh_auto_build -- -C src
 	dh_auto_build -- -C scheme
 
+override_dh_auto_install:
+	dh_auto_install
+	mv debian/ikarus/usr/bin/scheme-script  debian/ikarus/usr/bin/ikarus-scheme-script
+
 override_dh_install:
 	dh_install
 	-rm --verbose debian/ikarus/usr/share/doc/ikarus/COPYING

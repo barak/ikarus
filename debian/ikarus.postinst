@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ]; then
+    update-alternatives --install /usr/bin/scheme \
+                                  scheme \
+                                  /usr/bin/ikarus \
+                                  18 \
+                        --slave /usr/share/man/man1/scheme.1.gz \
+                                scheme.1.gz \
+                                /usr/share/man/man1/ikarus.1.gz
+    update-alternatives --install /usr/bin/scheme-script \
+                                  scheme-script \
+                                  /usr/bin/ikarus-scheme-script \
+                                  18 \
+                        --slave /usr/share/man/man1/scheme-script.1.gz \
+                                scheme-script.1.gz \
+                                /usr/share/man/man1/ikarus-scheme-script.1.gz
+fi
+
+#DEBHELPER#
