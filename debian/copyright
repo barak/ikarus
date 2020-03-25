@@ -163,7 +163,7 @@ License: SITARAM
  License can be found in /usr/share/common-licenses/LGPL
 
 Files: benchmarks/*
-Coyright: Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
+Copyright: Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
  	  Copyright 2000 Sun Microsystems, Inc. All rights reserved.
  	  Copyright (c) 1995 by Olin Shivers.
 License: LARCENCY-GAMBIT
