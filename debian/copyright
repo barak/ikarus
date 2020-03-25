@@ -17,15 +17,15 @@ Comment:
  the GNU GPL-3, according to email to the ikarus-users mailing list
  https://groups.google.com/group/ikarus-users/msg/407afbed9b6ca961?dmode=source&output=gplain&noredirect
  whose relevant portion reads:
-
+ .
  From: Abdulaziz Ghuloum <aghul...@gmail.com>
  Subject: Re: [ikarus-users] [announce] Ikarus Texinfo documentation 2008-10-21-12-56-59
  Date: Tue, 21 Oct 2008 21:50:30 -0400
  To: ikarus-users@googlegroups.com
  Message-Id: <7C95F931-B98F-4281-9A69-A524D8A48...@gmail.com>
-
+ .
  > ...  AG can you ckeck the copyright notices?
-
+ .
  Yeah, it's incorrect.  The copyright on the user's guide was changed
  from the GNU-FDL to the GNU-GPL some time around the 0.0.2 release or
  shortly after that.  ...
@@ -34,16 +34,16 @@ License: GPL-3
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License version 3
  as published by the Free Software Foundation.
-
+ .
  This package is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License version 3 for more details.
-
+ .
  You should have received a copy of the GNU General Public License
  version 3 along with this package; if not, write to the Free Software
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
-
+ .
  On Debian systems, the complete text of the GNU General
  Public License can be found in `/usr/share/common-licenses/GPL-3'.
 
@@ -58,10 +58,10 @@ License: PSYNTAX
  the rights to use, copy, modify, merge, publish, distribute, sublicense,
  and/or sell copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following conditions:
-
+ .
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
-
+ .
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
@@ -75,31 +75,31 @@ License: MIT-X-License
 
 License: MIT-X-License
  The file install-sh uses the "MIT X License",
-
+ .
  Copyright (C) 1994 X Consortium
-
+ .
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to
  deal in the Software without restriction, including without limitation the
  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
  sell copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
-
+ .
  The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
-
+ .
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
  X CONSORTIUM BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
  AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNEC-
  TION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+ .
  Except as contained in this notice, the name of the X Consortium shall not
  be used in advertising or otherwise to promote the sale, use or other deal-
  ings in this Software without prior written authorization from the X Consor-
  tium.
-
+ .
  FSF changes to this file are in the public domain.
 
 Files: lib/match.ss
@@ -127,10 +127,10 @@ License: BEWIG
  publish, distribute, sublicense, and/or sell copies of the Software,
  and to permit persons to whom the Software is furnished to do so,
  subject to the following conditions:
- 
+ .
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+ .
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -158,7 +158,7 @@ License: SITARAM
  that "FS (as in GPL, LGPL) bundlers who require a standard license
  may use the LGPL to bundle any of these items."
  (http://www.ccs.neu.edu/~dorai/, 10-Feb-2008)
-
+ .
  On Debian systems, the complete text of the GNU Lesser General Public
  License can be found in /usr/share/common-licenses/LGPL
 
@@ -179,18 +179,18 @@ License: LARCENCY-GAMBIT
  Apache, "you can choose whichever license you prefer: LGPL version 2.1
  license; or Apache version 2.0 license."  The Larceny license is
  http://larceny.ccs.neu.edu/larceny-trac/browser/trunk/larceny_src/COPYRIGHT
-
+ .
    Copyright 1991, 1994, 1998 William D Clinger
    Copyright 1998             Lars T Hansen
    Copyright 1984 - 1993      Lightship Software, Incorporated
-
+ .
    Permission to copy this software, in whole or in part, to use this
    software for any lawful purpose, and to redistribute this software
    is granted subject to the following restriction:  Any publication
    or redistribution of this software, whether on its own or
    incorporated into other software, must bear the above copyright
    notices and the following legend:
-
+ .
        The Twobit compiler and the Larceny runtime system were
        developed by William Clinger and Lars Hansen with the
        assistance of Lightship Software and the College of Computer
@@ -198,7 +198,7 @@ License: LARCENCY-GAMBIT
        Clinger et al remain the sole copyright holders to Twobit
        and Larceny and that no rights pursuant to that status are
        waived or conveyed.
-
+ .
    Twobit and Larceny are provided as is.  The user specifically
    acknowledges that Northeastern University, William Clinger, Lars
    Hansen, and Lightship Software have not made any representations
@@ -209,36 +209,36 @@ License: LARCENCY-GAMBIT
    William Clinger, Lars Hansen, and Lightship Software from any cost,
    liability, or expense arising from, or in any way related to the
    use of this software.
-
+ .
    Bug reports, comments, and suggestions can be sent to the authors
    of Twobit and Larceny at larceny@ccs.neu.edu.
-
+ .
    ----------------------------------------------------------------
-
+ .
    The implementors of Larceny include:
-
+ .
        William D Clinger
        Lars T Hansen
        Lightship Software, Incorporated
        Felix S Klock II
        Jesse Tov
-
+ .
    Files that contain Twobit and/or Larceny source code and are
    copyrighted by these people are governed by Larceny's main
    permission notice above.
-
+ .
    ----------------------------------------------------------------
-
+ .
    In addition to Twobit and Larceny's main copyright and permission
    notices above, the following copyright and permission notices
    pertain to software that is part of Twobit and/or Larceny or
    may be distributed together with Twobit and Larceny.
-
+ .
    In source distributions of Larceny, the following copyright and
    permission notices also appear within the copyrighted code.  We
    reproduce them here for reference, and to ensure that they are
    distributed with binary distributions of Larceny.
-
+ .
    We emphasize that all copyrighted software used in Twobit and
    Larceny is used by the kind permission of the copyright holders.
 
@@ -312,19 +312,19 @@ License: MACROS
 
 License: MACROS
     Simple Hygienic Macros and Simple Modules:
-
+ .
       Copyright (c) 2005 André van Tonder
-
+ .
       Permission is hereby granted, free of charge, to any person obtaining a
       copy of this software and associated documentation files (the ``Software''),
       to deal in the Software without restriction, including without limitation
       the rights to use, copy, modify, merge, publish, distribute, sublicense,
       and/or sell copies of the Software, and to permit persons to whom the
       Software is furnished to do so, subject to the following conditions:
-
+ .
       The above copyright notice and this permission notice shall be included in
       all copies or substantial portions of the Software.
-
+ .
       THE SOFTWARE IS PROVIDED ``AS IS'', WITHOUT WARRANTY OF ANY KIND, EXPRESS
       OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
       FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -397,9 +397,9 @@ License: SRFI
    source code in that directory have agreed to the permission notice
    that is part of the standard SRFI copyright statement, which is
    found in http://srfi.schemers.org/srfi-process.html:
-
+ .
        Copyright (C) AUTHOR (YEAR). All Rights Reserved.
-
+ .
        Permission is hereby granted, free of charge, to any
        person obtaining a copy of this software and associated
        documentation files (the "Software"), to deal in the
@@ -408,11 +408,11 @@ License: SRFI
        sublicense, and/or sell copies of the Software, and to permit
        persons to whom the Software is furnished to do so, subject
        to the following conditions:
-
+ .
        The above copyright notice and this permission notice shall
        be included in all copies or substantial portions of the
        Software.
-
+ .
        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
        KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
        WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
