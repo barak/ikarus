@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=Ikarus Scheme
+Comment=Ikarus Implementation of the Scheme Programming Language
+Exec=/usr/bin/ikarus
+Icon=Ikarus_Scheme_Logo
+Terminal=true
+Type=Application
+Categories=Development;Education;ComputerScience;
+Keywords=r6rs;
