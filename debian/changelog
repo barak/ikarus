@@ -1,6 +1,7 @@
-ikarus (0.0.3+bzr.2010.01.26-7) UNRELEASED; urgency=medium
+ikarus (0.0.3+bzr.2010.01.26-7) unstable; urgency=medium
 
   * disable PIE on i386 (closes: #858037)
+  * Bump debhelper from old 12 to 13.
 
  -- Barak A. Pearlmutter <bap@debian.org>  Sun, 17 May 2020 15:19:14 +0100
 
