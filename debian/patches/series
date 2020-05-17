@@ -5,3 +5,4 @@
 0005-rand-vs-random.patch
 0006-flonums-rounding-comment.patch
 0007-automake-pkglib.patch
+0008-update-configure.ac.patch
