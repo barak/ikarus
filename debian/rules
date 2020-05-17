@@ -1,6 +1,10 @@
 #!/usr/bin/make -f
 
+ifneq (,$(filter i386,$(DEB_HOST_ARCH)))
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all,-pie
+else
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+endif
 
 %:
 	dh $@
